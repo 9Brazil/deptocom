@@ -3,7 +3,9 @@ unit app;
 interface
 
 uses
-  shlobj;
+  shlobj,
+  sysutils,
+  windows;
 
 const
   DIRECTORY_SEPARATOR='\';
@@ -11,16 +13,20 @@ const
   EOL=#13#10;
 
   SOFTWARE_NAME='deptocom';
+  LOG_SUFFIX='.log';
+  LOG_FILE=SOFTWARE_NAME+LOG_SUFFIX;
   REGISTRY_MAINKEY='Software'+DIRECTORY_SEPARATOR+SOFTWARE_NAME+DIRECTORY_SEPARATOR;
   BINARIES_FOLDER_NAME='bin';//default
   DATA_FOLDER_NAME='data';//default
   TABLE_SUFFIX='.dat';
   HISTORY_TABLE_SUFFIX='.h.dat';
 
-  //RUNTIME ERROR CODES
-  //RUNERR_INVALID_BINDIR=3;
-  //RUNERR_INVALID_SOFTWAREDIR=5;
-  RUNERR_NOTEMPDIR=7;
+  //CUSTOM RUNTIME ERROR CODES
+  RUNERR_NO_REGISTRY_MAINKEY=71;
+  RUNERR_NO_LOGFILE=72;
+  //RUNERR_INVALID_BINDIR=73;
+  //RUNERR_INVALID_SOFTWAREDIR=74;
+  RUNERR_NO_TEMPDIR=75;
 
 type
   float=single;
@@ -42,22 +48,61 @@ type
     csidAppData=CSIDL_APPDATA
   );
 
+  edeptocom=class(exception);
+
 function specialdir(const dirnum:csid):ansistring;
+function queryregistry(const nome:ansistring; out valor:ansistring; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 function OS_USER:ansistring;
 function COMPUTERNAME:ansistring;
-function LOGFILE:ansistring;
+function LOGFILENAME:ansistring;
 function DEPTOCOMDIR:ansistring;
 function BINDIR:ansistring;
 function DATADIR:ansistring;
 function TEMPDIR:ansistring;
+procedure logdebug(const msg:ansistring);
+procedure logerror(const msg:ansistring);
+procedure logfatal(const msg:ansistring);
+procedure loginfo(const msg:ansistring);
+procedure logwarn(const msg:ansistring);
 
 implementation
 
 uses
   activex,
-  //log,
-  sysutils,
-  windows;
+  registry;
+
+//cria a pasta (chave) Computador\HKEY_CURRENT_USER\Software\deptcom no registro do Windows, se ela não existe
+procedure createmainkey;
+var
+  reg:tregistry;
+begin
+  reg:=tregistry.create(KEY_ALL_ACCESS);
+  try
+    reg.rootkey:=HKEY_CURRENT_USER;
+    reg.openkey(REGISTRY_MAINKEY,true);
+    reg.closekey;
+  finally
+    reg.free;
+  end;
+end;
+
+function queryregistry(const nome:ansistring; out valor:ansistring; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+var
+  reg:tregistry;
+begin
+  reg:=tregistry.create(KEY_QUERY_VALUE);
+  try
+    reg.rootkey:=rootkey;
+    result:=reg.openkey(REGISTRY_MAINKEY,false);
+    if not result then exit;
+    result:=reg.valueexists(nome);
+    if result then
+      valor:=reg.readstring(nome);
+    reg.closekey;
+  finally
+    reg.free;
+  end;
+end;
 
 function specialdir(const dirnum:csid):ansistring;
 var
@@ -95,16 +140,18 @@ begin
 end;
 
 var
-  _LOGFILE,
+  _LOGFILENAME,
   _DEPTOCOMDIR,
   _BINDIR,
   _DATADIR,
   _TEMPDIR
     :ansistring;
+  logfile
+    :textfile;
 
-function LOGFILE:ansistring;
+function LOGFILENAME:ansistring;
 begin
-  result:=_LOGFILE;
+  result:=_LOGFILENAME;
 end;
 
 function DEPTOCOMDIR:ansistring;
@@ -127,14 +174,67 @@ begin
   result:=_TEMPDIR;
 end;
 
+procedure logdebug(const msg:ansistring);
+begin
+
+end;
+
+procedure logerror(const msg:ansistring);
+begin
+
+end;
+
+procedure logfatal(const msg:ansistring);
+begin
+
+end;
+
+procedure loginfo(const msg:ansistring);
+begin
+
+end;
+
+procedure logwarn(const msg:ansistring);
+begin
+
+end;
+
 var
+  reg
+    :tregistry;
   straux
     :ansistring;
-  binfolderOK
-  //,softwarefolderOK
+  errcode
+    :int32;
+  binfolderOK,
+  //softwarefolderOK,
+  logfileOK
     :boolean;
 
 initialization
+  try
+    errcode:=RUNERR_NO_REGISTRY_MAINKEY;
+    createmainkey;
+    errcode:=RUNERR_NO_LOGFILE;
+    queryregistry('logfile',_LOGFILENAME);
+    _LOGFILENAME:=trim(_LOGFILENAME);
+    if _LOGFILENAME='' then begin
+      _LOGFILENAME:=LOG_FILE;
+      //registra o novo nome do arquivo de log
+    end;
+    assignfile(logfile,_LOGFILENAME);
+    if fileexists(_LOGFILENAME) then
+      append(logfile)
+    else
+      rewrite(logfile);
+    logfileOK:=true;
+  except
+    on e:exception do begin
+      writeln(e.classname+': '+e.message);
+      runerror(errcode);
+    end;
+  end;
+
   _BINDIR:=getcurrentdir;
   binfolderOK:=lowercase(extractfilename(_BINDIR))=lowercase(BINARIES_FOLDER_NAME);
   (*
@@ -161,9 +261,15 @@ initialization
   //não existindo, tenta criá-lo
   try
     straux:=specialdir(csidAppData);
-    if not directoryexists(straux) then
+    //APENAS POR COMPLETUDE! NÃO OCORRE!
+    if not directoryexists(straux) then begin
+      logwarn(SOFTWARE_NAME+': app: o diretório '+straux+' não existe');
       straux:=specialdir(csidMyDocuments);
-    _tempdir:=straux+DIRECTORY_SEPARATOR+SOFTWARE_NAME;
+      if not directoryexists(straux) then
+        logwarn(SOFTWARE_NAME+': app: o diretório '+straux+' não existe');
+    end;
+
+    _TEMPDIR:=straux+DIRECTORY_SEPARATOR+SOFTWARE_NAME;
     if not directoryexists(_TEMPDIR) then
       if not forcedirectories(_TEMPDIR) then begin
         _TEMPDIR:=_DEPTOCOMDIR+DIRECTORY_SEPARATOR+'temp';
@@ -172,14 +278,16 @@ initialization
             raise exception.create('NO TEMPORARY DIRECTORY');
       end;
   except
-    //on e:exception do logfatal(SOFTWARE_NAME+': app: Runtime Error: '+inttostr(RUNERR_NOTEMPDIR)+': '+e.message+': Não foi possível criar um diretório para arquivos temporários.');
-    runerror(RUNERR_NOTEMPDIR); //sem um diretório para arquivos temporários
-                                //não podemos iniciar o programa
+    on e:exception do begin
+      logfatal(SOFTWARE_NAME+': app: Runtime Error: '+inttostr(RUNERR_NO_TEMPDIR)+': '+e.classname+': '+e.message+': Não foi possível criar um diretório para arquivos temporários.');
+      runerror(RUNERR_NO_TEMPDIR);  //sem um diretório para arquivos temporários
+                                    //não podemos iniciar o programa
+    end;
   end;
 
   straux:='';
+  errcode:=0;
 finalization
-  //
-  //
-  //
+  if logfileOK then
+    closefile(logfile);
 end.
