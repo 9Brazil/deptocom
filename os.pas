@@ -22,6 +22,8 @@ type
   );
 
 function specialdir(const dirnum:csid):ansistring;
+function OS_USER:ansistring;
+function COMPUTERNAME:ansistring;
 
 implementation
 
@@ -42,6 +44,26 @@ begin
     alloc.free(specialdir);
     result:=ansistring(buf);
   end;
+end;
+
+function OS_USER:ansistring;
+var
+  userNameBuffer:array[0..255] of char;
+  sizeBuffer:dword;
+begin
+  sizeBuffer:=256;
+  getUserName(userNameBuffer,sizeBuffer);
+  result:=ansistring(userNameBuffer);
+end;
+
+function COMPUTERNAME:ansistring;
+var
+  computerName:array[0..256] of char;
+  size:dword;
+begin
+ size:=256;
+ getComputerName(computerName,size);
+ result:=computerName;
 end;
 
 end.

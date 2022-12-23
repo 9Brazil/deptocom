@@ -57,9 +57,10 @@ begin
 end;
 
 var
-  straux:ansistring;
-  binfolderOK,
-  softwarefolderOK
+  straux
+    :ansistring;
+  binfolderOK
+  //,softwarefolderOK
     :boolean;
 
 initialization
@@ -75,7 +76,7 @@ initialization
   else
     _DEPTOCOMDIR:=_BINDIR;
 
-  softwarefolderOK:=lowercase(extractfilename(_DEPTOCOMDIR))=lowercase(SOFTWARE_NAME);
+  //softwarefolderOK:=lowercase(extractfilename(_DEPTOCOMDIR))=lowercase(SOFTWARE_NAME);
   (*
   if not softwarefolderOK then
     runerror(RUNERR_INVALID_SOFTWAREDIR);//a pasta do software deve coincidir com o nome do software especificado no código
