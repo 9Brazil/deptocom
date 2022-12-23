@@ -215,6 +215,7 @@ initialization
   try
     errcode:=RUNERR_NO_REGISTRY_MAINKEY;
     createmainkey;
+    logfileOK:=false;
     errcode:=RUNERR_NO_LOGFILE;
     queryregistry('logfile',_LOGFILENAME);
     _LOGFILENAME:=trim(_LOGFILENAME);
