@@ -1,4 +1,4 @@
-unit area;
+unit locale;
 
 interface
 

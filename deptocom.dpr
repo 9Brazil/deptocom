@@ -5,9 +5,9 @@ program deptocom;
 uses
   app in 'app.pas',
   defs in 'defs.pas',
-  lang in 'lang.pas',
-  area in 'area.pas',  
-  os in 'os.pas';
+  os in 'os.pas',
+  locale in 'locale.pas',
+  gui in 'gui.pas';
 
 begin
   { TODO -oUser -cConsole Main : Insert code here }

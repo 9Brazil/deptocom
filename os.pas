@@ -22,6 +22,7 @@ type
   );
 
 function specialdir(const dirnum:csid):ansistring;
+//function readregistryvalue(const key:ansistring; const rootKey=
 function OS_USER:ansistring;
 function COMPUTERNAME:ansistring;
 

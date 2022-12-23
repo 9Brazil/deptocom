@@ -7,10 +7,9 @@ uses
 
 const
   SOFTWARE_NAME='deptocom';
-
-  BINARIES_FOLDER_NAME='bin';
-  DATA_FOLDER_NAME='data';
-
+  REGISTRY_MAINKEY='Software'+DIRECTORY_SEPARATOR+SOFTWARE_NAME+DIRECTORY_SEPARATOR;
+  BINARIES_FOLDER_NAME='bin';//default
+  DATA_FOLDER_NAME='data';//default
   TABLE_SUFFIX='.dat';
   HISTORY_TABLE_SUFFIX='.h.dat';
 
@@ -19,6 +18,7 @@ const
   //RUNERR_INVALID_SOFTWAREDIR=5;
   RUNERR_NOTEMPDIR=7;
 
+function LOGFILE:ansistring;
 function DEPTOCOMDIR:ansistring;
 function BINDIR:ansistring;
 function DATADIR:ansistring;
@@ -31,11 +31,17 @@ uses
   sysutils;
 
 var
+  _LOGFILE,
   _DEPTOCOMDIR,
   _BINDIR,
   _DATADIR,
   _TEMPDIR
     :ansistring;
+
+function LOGFILE:ansistring;
+begin
+  result:=_LOGFILE;
+end;
 
 function DEPTOCOMDIR:ansistring;
 begin
