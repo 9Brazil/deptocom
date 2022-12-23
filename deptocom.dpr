@@ -4,8 +4,6 @@ program deptocom;
 
 uses
   app in 'app.pas',
-  defs in 'defs.pas',
-  os in 'os.pas',
   locale in 'locale.pas',
   gui in 'gui.pas';
 
