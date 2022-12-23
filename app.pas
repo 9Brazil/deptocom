@@ -27,6 +27,7 @@ function TEMPDIR:ansistring;
 implementation
 
 uses
+  //log,
   sysutils;
 
 var
@@ -67,8 +68,10 @@ initialization
   _BINDIR:=getcurrentdir;
   binfolderOK:=lowercase(extractfilename(_BINDIR))=lowercase(BINARIES_FOLDER_NAME);
   (*
-  if not binfolderOK then
+  if not binfolderOK then begin
+    //logfatal(SOFTWARE_NAME+': app: Runtime Error: '+inttostr(RUNERR_INVALID_BINDIR)+': O diretório dos binários não coincide com a especificação do software.');
     runerror(RUNERR_INVALID_BINDIR);//a pasta dos binários deve coincidir com o especificado no código
+  end;
   *)
 
   if binfolderOK then
@@ -78,8 +81,10 @@ initialization
 
   //softwarefolderOK:=lowercase(extractfilename(_DEPTOCOMDIR))=lowercase(SOFTWARE_NAME);
   (*
-  if not softwarefolderOK then
+  if not softwarefolderOK then begin
+    //logfatal(SOFTWARE_NAME+': app: Runtime Error: '+inttostr(RUNERR_INVALID_SOFTWAREDIR)+': O diretório do software é inválido.');
     runerror(RUNERR_INVALID_SOFTWAREDIR);//a pasta do software deve coincidir com o nome do software especificado no código
+  end;
   *)
 
   //verifica a existência de um diretório para arquivos temporários
@@ -97,7 +102,8 @@ initialization
             raise exception.create('NO TEMPORARY DIRECTORY');
       end;
   except
-    runerror(RUNERR_NOTEMPDIR); //sem um diretório para arquivo temporários
+    //on e:exception do logfatal(SOFTWARE_NAME+': app: Runtime Error: '+inttostr(RUNERR_NOTEMPDIR)+': '+e.message+': Não foi possível criar um diretório para arquivos temporários.');
+    runerror(RUNERR_NOTEMPDIR); //sem um diretório para arquivos temporários
                                 //não podemos iniciar o programa
   end;
 
