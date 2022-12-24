@@ -48,8 +48,8 @@ type
   edeptocom=class(exception);
 
 function specialdir(const dirnum:csid):ansistring;
-function queryregistryvalue(const nome:ansistring; out valor:ansistring; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
-function setregistryvalue(const nome, valor : ansistring; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+function queryregistryvalue(const nome:ansistring; out valor:ansistring; const key:ansistring=REGISTRY_MAINKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+function setregistryvalue(const nome, valor : ansistring; const key:ansistring=REGISTRY_MAINKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 function OS_USER:ansistring;
 function COMPUTERNAME:ansistring;
 function LOGFILENAME:ansistring;
@@ -84,14 +84,14 @@ begin
   end;
 end;
 
-function queryregistryvalue(const nome:ansistring; out valor:ansistring; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+function queryregistryvalue(const nome:ansistring; out valor:ansistring; const key:ansistring=REGISTRY_MAINKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 var
   reg:tregistry;
 begin
   reg:=tregistry.create(KEY_QUERY_VALUE);
   try
     reg.rootkey:=rootkey;
-    result:=reg.openkey(REGISTRY_MAINKEY,false);
+    result:=reg.openkey(key,false);
     if not result then exit;
     result:=reg.valueexists(nome);
     if result then
@@ -102,7 +102,7 @@ begin
   end;
 end;
 
-function setregistryvalue(const nome, valor : ansistring; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+function setregistryvalue(const nome, valor : ansistring; const key:ansistring=REGISTRY_MAINKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 var
   reg:tregistry;
 begin
@@ -110,7 +110,7 @@ begin
   reg:=tregistry.create(KEY_SET_VALUE);
   try
     reg.rootkey:=rootkey;
-    result:=reg.openkey(REGISTRY_MAINKEY,false);
+    result:=reg.openkey(key,false);
     if not result then exit;
     reg.writestring(nome,valor);
     reg.closekey;
@@ -216,8 +216,6 @@ begin
 end;
 
 var
-  reg
-    :tregistry;
   straux
     :ansistring;
   errcode
@@ -228,8 +226,8 @@ var
     :boolean;
 
 initialization
+  errcode:=RUNERR_NO_REGISTRY_MAINKEY;
   try
-    errcode:=RUNERR_NO_REGISTRY_MAINKEY;
     createmainkey;
     logfileOK:=false;
     errcode:=RUNERR_NO_LOGFILE;
