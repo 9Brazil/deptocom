@@ -23,15 +23,13 @@ const
   RUNERR_NO_REGISTRY_MAINKEY=51;
   RUNERR_NO_LOGFILE=52;
   //RUNERR_INVALID_BINDIR=53;
-  //RUNERR_INVALID_SOFTWAREDIR=54;
-  RUNERR_NO_TEMPDIR=55;
+  RUNERR_NO_TEMPDIR=54;
 
 type
   float=single;
   int8=shortint;
   int16=smallint;
   int32=integer;
-  //utf8string=
 
   csid=(
     csidDesktop=CSIDL_DESKTOP,
@@ -216,7 +214,6 @@ var
   errcode
     :int32;
   binfolderOK,
-  //softwarefolderOK,
   logfileOK
     :boolean;
 
@@ -245,27 +242,17 @@ initialization
     end;
   end;
 
-  _BINDIR:=getcurrentdir;
-  binfolderOK:=lowercase(extractfilename(_BINDIR))=lowercase(BINARIES_FOLDER_NAME);
-  (*
-  if not binfolderOK then begin
-    //logfatal(SOFTWARE_NAME+': app: Runtime Error: '+inttostr(RUNERR_INVALID_BINDIR)+': O diretório dos binários não coincide com a especificação do software.');
-    runerror(RUNERR_INVALID_BINDIR);//a pasta dos binários deve coincidir com o especificado no código
+  try
+    _BINDIR:=getcurrentdir;
+    binfolderOK:=lowercase(extractfilename(_BINDIR))=lowercase(BINARIES_FOLDER_NAME);
+    if binfolderOK then
+      _DEPTOCOMDIR:=extractfiledir(_BINDIR)
+    else
+      _DEPTOCOMDIR:=_BINDIR;
+    setregistryvalue('bindir',_BINDIR);
+    setregistryvalue('deptocomdir',_DEPTOCOMDIR);
+  except
   end;
-  *)
-
-  if binfolderOK then
-    _DEPTOCOMDIR:=extractfiledir(_BINDIR)
-  else
-    _DEPTOCOMDIR:=_BINDIR;
-
-  //softwarefolderOK:=lowercase(extractfilename(_DEPTOCOMDIR))=lowercase(SOFTWARE_NAME);
-  (*
-  if not softwarefolderOK then begin
-    //logfatal(SOFTWARE_NAME+': app: Runtime Error: '+inttostr(RUNERR_INVALID_SOFTWAREDIR)+': O diretório do software é inválido.');
-    runerror(RUNERR_INVALID_SOFTWAREDIR);//a pasta do software deve coincidir com o nome do software especificado no código
-  end;
-  *)
 
   //verifica a existência de um diretório para arquivos temporários
   //não existindo, tenta criá-lo
