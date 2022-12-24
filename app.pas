@@ -197,7 +197,7 @@ var
 begin
   line:=
     formatdatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
-    +'['+COMPUTERNAME+'\'+OS_USER+']'
+    +'['+OS_USER+']'
     +'[ERROR] '
     +msg;
   writeln(logfile,line);
@@ -209,7 +209,7 @@ var
 begin
   line:=
     formatdatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
-    +'['+COMPUTERNAME+'\'+OS_USER+']'
+    +'['+OS_USER+']'
     +'[ERROR] '
     +e.classname+': '+e.message;
   writeln(logfile,line);
@@ -221,7 +221,7 @@ var
 begin
   line:=
     formatdatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
-    +'['+COMPUTERNAME+'\'+OS_USER+']'
+    +'['+OS_USER+']'
     +'[FATAL]'
     +'[runerror code: '+inttostr(errorCode)+'] '
     +msg;
@@ -235,7 +235,7 @@ var
 begin
   line:=
     formatdatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
-    +'['+COMPUTERNAME+'\'+OS_USER+']'
+    +'['+OS_USER+']'
     +'[INFO] '
     +msg;
   writeln(logfile,line);
@@ -247,7 +247,7 @@ var
 begin
   line:=
     formatdatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
-    +'['+COMPUTERNAME+'\'+OS_USER+']'
+    +'['+OS_USER+']'
     +'[WARN] '
     +msg;
   writeln(logfile,line);
@@ -324,7 +324,7 @@ initialization
   except
     on e:exception do begin
       logfatal(SOFTWARE_NAME+': app: initialization: '+e.classname+': '+e.message+': Não foi possível criar um diretório para arquivos temporários.',
-      RUNERR_NO_TMPDIR); //sem um diretório para arquivos temporários
+      RUNERR_NO_TMPDIR);  //sem um diretório para arquivos temporários
                           //não podemos iniciar o programa
     end;
   end;
