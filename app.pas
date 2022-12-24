@@ -23,7 +23,7 @@ const
   RUNERR_NO_REGISTRY_MAINKEY=51;
   RUNERR_NO_LOGFILE=52;
   //RUNERR_INVALID_BINDIR=53;
-  RUNERR_NO_TEMPDIR=54;
+  RUNERR_NO_TMPDIR=54;
 
 type
   float=single;
@@ -50,10 +50,11 @@ function LOGFILENAME:ansistring;
 function DEPTOCOMDIR:ansistring;
 function BINDIR:ansistring;
 function DATADIR:ansistring;
-function TEMPDIR:ansistring;
+function TMPDIR:ansistring;
 procedure logdebug(const msg:ansistring);
-procedure logerror(const msg:ansistring);
-procedure logfatal(const msg:ansistring);
+procedure logerror(const msg:ansistring);overload;
+procedure logerror(const e:exception);overload;
+procedure logfatal(const msg:ansistring; const errorCode:int32);
 procedure loginfo(const msg:ansistring);
 procedure logwarn(const msg:ansistring);
 
@@ -153,10 +154,8 @@ var
   _DEPTOCOMDIR,
   _BINDIR,
   _DATADIR,
-  _TEMPDIR
+  _TMPDIR
     :ansistring;
-  logfile
-    :textfile;
 
 function LOGFILENAME:ansistring;
 begin
@@ -178,10 +177,14 @@ begin
   result:=_DATADIR;
 end;
 
-function TEMPDIR:ansistring;
+function TMPDIR:ansistring;
 begin
-  result:=_TEMPDIR;
+  result:=_TMPDIR;
 end;
+
+var
+  logfile
+    :textfile;
 
 procedure logdebug(const msg:ansistring);
 begin
@@ -189,23 +192,65 @@ begin
 end;
 
 procedure logerror(const msg:ansistring);
+var
+  line:ansistring;
 begin
-
+  line:=
+    formatdatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
+    +'['+COMPUTERNAME+'\'+OS_USER+']'
+    +'[ERROR] '
+    +msg;
+  writeln(logfile,line);
 end;
 
-procedure logfatal(const msg:ansistring);
+procedure logerror(const e:exception);
+var
+  line:ansistring;
 begin
+  line:=
+    formatdatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
+    +'['+COMPUTERNAME+'\'+OS_USER+']'
+    +'[ERROR] '
+    +e.classname+': '+e.message;
+  writeln(logfile,line);
+end;
 
+procedure logfatal(const msg:ansistring; const errorCode:int32);
+var
+  line:ansistring;
+begin
+  line:=
+    formatdatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
+    +'['+COMPUTERNAME+'\'+OS_USER+']'
+    +'[FATAL]'
+    +'[runerror code: '+inttostr(errorCode)+'] '
+    +msg;
+  writeln(logfile,line);
+  runerror(errorCode);
 end;
 
 procedure loginfo(const msg:ansistring);
+var
+  line:ansistring;
 begin
-
+  line:=
+    formatdatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
+    +'['+COMPUTERNAME+'\'+OS_USER+']'
+    +'[INFO] '
+    +msg;
+  writeln(logfile,line);
 end;
 
 procedure logwarn(const msg:ansistring);
+var
+  line:ansistring;
 begin
-
+  line:=
+    formatdatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
+    +'['+COMPUTERNAME+'\'+OS_USER+']'
+    +'[WARN] '
+    +msg;
+  writeln(logfile,line);
 end;
 
 var
@@ -237,7 +282,7 @@ initialization
     logfileOK:=true;
   except
     on e:exception do begin
-      writeln(e.classname+': '+e.message);
+      writeln(SOFTWARE_NAME+': app: initialization: '+e.classname+': '+e.message);
       runerror(errcode);
     end;
   end;
@@ -252,6 +297,8 @@ initialization
     setregistryvalue('bindir',_BINDIR);
     setregistryvalue('deptocomdir',_DEPTOCOMDIR);
   except
+    on e:exception do
+      logwarn(SOFTWARE_NAME+': app: initialization: '+e.classname+': '+e.message);
   end;
 
   //verifica a existência de um diretório para arquivos temporários
@@ -260,26 +307,33 @@ initialization
     straux:=specialdir(csidAppData);
     //APENAS POR COMPLETUDE! NÃO OCORRE!
     if not directoryexists(straux) then begin
-      logwarn(SOFTWARE_NAME+': app: o diretório '+straux+' não existe');
+      logwarn(SOFTWARE_NAME+': app: initialization: o diretório '+straux+' não existe');
       straux:=specialdir(csidMyDocuments);
       if not directoryexists(straux) then
-        logwarn(SOFTWARE_NAME+': app: o diretório '+straux+' não existe');
+        logwarn(SOFTWARE_NAME+': app: initialization: o diretório '+straux+' não existe');
     end;
 
-    _TEMPDIR:=straux+DIRECTORY_SEPARATOR+SOFTWARE_NAME;
-    if not directoryexists(_TEMPDIR) then
-      if not forcedirectories(_TEMPDIR) then begin
-        _TEMPDIR:=_DEPTOCOMDIR+DIRECTORY_SEPARATOR+'temp';
-        if not directoryexists(_TEMPDIR) then
-          if not forcedirectories(_TEMPDIR) then
+    _TMPDIR:=straux+DIRECTORY_SEPARATOR+SOFTWARE_NAME;
+    if not directoryexists(_TMPDIR) then
+      if not forcedirectories(_TMPDIR) then begin
+        _TMPDIR:=_DEPTOCOMDIR+DIRECTORY_SEPARATOR+'temp';
+        if not directoryexists(_TMPDIR) then
+          if not forcedirectories(_TMPDIR) then
             raise exception.create('NO TEMPORARY DIRECTORY');
       end;
   except
     on e:exception do begin
-      logfatal(SOFTWARE_NAME+': app: Runtime Error: '+inttostr(RUNERR_NO_TEMPDIR)+': '+e.classname+': '+e.message+': Não foi possível criar um diretório para arquivos temporários.');
-      runerror(RUNERR_NO_TEMPDIR);  //sem um diretório para arquivos temporários
-                                    //não podemos iniciar o programa
+      logfatal(SOFTWARE_NAME+': app: initialization: '+e.classname+': '+e.message+': Não foi possível criar um diretório para arquivos temporários.',
+      RUNERR_NO_TMPDIR); //sem um diretório para arquivos temporários
+                          //não podemos iniciar o programa
     end;
+  end;
+
+  try
+    setregistryvalue('tmpdir',_TMPDIR);
+  except
+    on e:exception do
+      logwarn(SOFTWARE_NAME+': app: initialization: '+e.classname+': '+e.message);
   end;
 
   straux:='';
