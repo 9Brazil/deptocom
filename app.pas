@@ -30,9 +30,6 @@ const
 
 type
   float=single;
-  //byte1=byte;
-  byte2=word;
-  byte4=cardinal;
   int8=shortint;
   int16=smallint;
   int32=integer;
@@ -51,7 +48,8 @@ type
   edeptocom=class(exception);
 
 function specialdir(const dirnum:csid):ansistring;
-function queryregistry(const nome:ansistring; out valor:ansistring; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+function queryregistryvalue(const nome:ansistring; out valor:ansistring; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+function setregistryvalue(const nome, valor : ansistring; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 function OS_USER:ansistring;
 function COMPUTERNAME:ansistring;
 function LOGFILENAME:ansistring;
@@ -86,7 +84,7 @@ begin
   end;
 end;
 
-function queryregistry(const nome:ansistring; out valor:ansistring; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+function queryregistryvalue(const nome:ansistring; out valor:ansistring; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 var
   reg:tregistry;
 begin
@@ -99,6 +97,24 @@ begin
     if result then
       valor:=reg.readstring(nome);
     reg.closekey;
+  finally
+    reg.free;
+  end;
+end;
+
+function setregistryvalue(const nome, valor : ansistring; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+var
+  reg:tregistry;
+begin
+  result:=false;
+  reg:=tregistry.create(KEY_SET_VALUE);
+  try
+    reg.rootkey:=rootkey;
+    result:=reg.openkey(REGISTRY_MAINKEY,false);
+    if not result then exit;
+    reg.writestring(nome,valor);
+    reg.closekey;
+    result:=true;
   finally
     reg.free;
   end;
@@ -217,11 +233,11 @@ initialization
     createmainkey;
     logfileOK:=false;
     errcode:=RUNERR_NO_LOGFILE;
-    queryregistry('logfile',_LOGFILENAME);
+    queryregistryvalue('logfile',_LOGFILENAME);
     _LOGFILENAME:=trim(_LOGFILENAME);
     if _LOGFILENAME='' then begin
       _LOGFILENAME:=LOG_FILE;
-      //registra o novo nome do arquivo de log
+      setregistryvalue('logfile',_LOGFILENAME);
     end;
     assignfile(logfile,_LOGFILENAME);
     if fileexists(_LOGFILENAME) then
