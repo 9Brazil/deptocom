@@ -9,8 +9,6 @@ uses
 
 const
   DIRECTORY_SEPARATOR='\';
-  DRIVE_SEPARATOR=':';
-  EOL=#13#10;
 
   SOFTWARE_NAME='deptocom';
   LOG_SUFFIX='.log';
@@ -45,8 +43,6 @@ type
     csidAppData=CSIDL_APPDATA
   );
 
-  edeptocom=class(exception);
-
 function specialdir(const dirnum:csid):ansistring;
 function queryregistryvalue(const nome:ansistring; out valor:ansistring; const key:ansistring=REGISTRY_MAINKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 function setregistryvalue(const nome, valor : ansistring; const key:ansistring=REGISTRY_MAINKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
@@ -69,7 +65,7 @@ uses
   activex,
   registry;
 
-//cria a pasta (chave) Computador\HKEY_CURRENT_USER\Software\deptcom no registro do Windows, se ela não existe
+//cria a pasta (chave) Computador\HKEY_CURRENT_USER\Software\deptocom no registro do Windows, se ela não existe
 procedure createmainkey;
 var
   reg:tregistry;
@@ -106,7 +102,6 @@ function setregistryvalue(const nome, valor : ansistring; const key:ansistring=R
 var
   reg:tregistry;
 begin
-  result:=false;
   reg:=tregistry.create(KEY_SET_VALUE);
   try
     reg.rootkey:=rootkey;
