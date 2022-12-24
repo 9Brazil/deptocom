@@ -7,7 +7,13 @@ uses
   locale in 'locale.pas',
   gui in 'gui.pas';
 
+var
+  minhaJanela:Window;
+  meuBotao:Button;
+
 begin
-  { TODO -oUser -cConsole Main : Insert code here }
+  minhaJanela:=newWindow;
+  meuBotao:=newButton;
+
   readln;
 end.

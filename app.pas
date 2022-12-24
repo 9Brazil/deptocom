@@ -187,8 +187,15 @@ var
     :textfile;
 
 procedure logdebug(const msg:ansistring);
+var
+  line:ansistring;
 begin
-
+  line:=
+    formatdatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
+    +'['+OS_USER+']'
+    +'[DEBUG] '
+    +msg;
+  writeln(logfile,line);
 end;
 
 procedure logerror(const msg:ansistring);
