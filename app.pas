@@ -11,16 +11,16 @@ const
   DIRECTORY_SEPARATOR='\';
 
   SOFTWARE_NAME='deptocom';
+  SOFTWARE_REGISTRYKEY='Software'+DIRECTORY_SEPARATOR+SOFTWARE_NAME+DIRECTORY_SEPARATOR;
   LOG_SUFFIX='.log';
   LOG_FILE=SOFTWARE_NAME+LOG_SUFFIX;
-  REGISTRY_MAINKEY='Software'+DIRECTORY_SEPARATOR+SOFTWARE_NAME+DIRECTORY_SEPARATOR;
   BINARIES_FOLDER_NAME='bin';//default
   DATA_FOLDER_NAME='data';//default
   TABLE_SUFFIX='.dat';
   HISTORY_TABLE_SUFFIX='.h.dat';
 
   //CUSTOM RUNTIME ERROR CODES
-  RUNERR_NO_REGISTRY_MAINKEY=51;
+  RUNERR_NO_SOFTWARE_REGISTRYKEY=51;
   RUNERR_NO_LOGFILE=52;
   //RUNERR_INVALID_BINDIR=53;
   RUNERR_NO_TMPDIR=54;
@@ -41,9 +41,9 @@ type
     csidAppData=CSIDL_APPDATA
   );
 
-function specialdir(const dirnum:csid):ansistring;
-function queryregistryvalue(const nome:ansistring; out valor:ansistring; const key:ansistring=REGISTRY_MAINKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
-function setregistryvalue(const nome, valor : ansistring; const key:ansistring=REGISTRY_MAINKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+function getSpecialDir(const dirNum:csid):ansistring;
+function queryRegistryValue(const nome:ansistring; out valor:ansistring; const key:ansistring=SOFTWARE_REGISTRYKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+function setRegistryValue(const nome, valor : ansistring; const key:ansistring=SOFTWARE_REGISTRYKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 function OS_USER:ansistring;
 function COMPUTERNAME:ansistring;
 function LOGFILENAME:ansistring;
@@ -65,21 +65,21 @@ uses
   registry;
 
 //cria a pasta (chave) Computador\HKEY_CURRENT_USER\Software\deptocom no registro do Windows, se ela não existe
-procedure createmainkey;
+procedure createSoftwareRegistryKey;
 var
   reg:tregistry;
 begin
   reg:=tregistry.create(KEY_ALL_ACCESS);
   try
     reg.rootkey:=HKEY_CURRENT_USER;
-    reg.openkey(REGISTRY_MAINKEY,true);
+    reg.openkey(SOFTWARE_REGISTRYKEY,true);
     reg.closekey;
   finally
     reg.free;
   end;
 end;
 
-function queryregistryvalue(const nome:ansistring; out valor:ansistring; const key:ansistring=REGISTRY_MAINKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+function queryRegistryValue(const nome:ansistring; out valor:ansistring; const key:ansistring=SOFTWARE_REGISTRYKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 var
   reg:tregistry;
 begin
@@ -97,7 +97,7 @@ begin
   end;
 end;
 
-function setregistryvalue(const nome, valor : ansistring; const key:ansistring=REGISTRY_MAINKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
+function setRegistryValue(const nome, valor : ansistring; const key:ansistring=SOFTWARE_REGISTRYKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 var
   reg:tregistry;
 begin
@@ -114,7 +114,7 @@ begin
   end;
 end;
 
-function specialdir(const dirnum:csid):ansistring;
+function getSpecialDir(const dirNum:csid):ansistring;
 var
   alloc:imalloc;
   specialdir:pItemIdList;
@@ -270,19 +270,19 @@ var
     :boolean;
 
 initialization
-  errcode:=RUNERR_NO_REGISTRY_MAINKEY;
+  errcode:=RUNERR_NO_SOFTWARE_REGISTRYKEY;
   try
-    createmainkey;
+    createSoftwareRegistryKey;
     logfileOK:=false;
     errcode:=RUNERR_NO_LOGFILE;
-    queryregistryvalue('logfile',_LOGFILENAME);
+    queryRegistryValue('logfile',_LOGFILENAME);
     _LOGFILENAME:=trim(_LOGFILENAME);
     if _LOGFILENAME='' then begin
       _LOGFILENAME:=LOG_FILE;
-      setregistryvalue('logfile',_LOGFILENAME);
+      setRegistryValue('logfile',_LOGFILENAME);
     end;
-    assignfile(logfile,_LOGFILENAME);
-    if fileexists(_LOGFILENAME) then
+    assignFile(logfile,_LOGFILENAME);
+    if fileExists(_LOGFILENAME) then
       append(logfile)
     else
       rewrite(logfile);
@@ -295,14 +295,14 @@ initialization
   end;
 
   try
-    _BINDIR:=getcurrentdir;
-    binfolderOK:=lowercase(extractfilename(_BINDIR))=lowercase(BINARIES_FOLDER_NAME);
+    _BINDIR:=getCurrentDir;
+    binfolderOK:=lowerCase(extractfilename(_BINDIR))=lowerCase(BINARIES_FOLDER_NAME);
     if binfolderOK then
-      _DEPTOCOMDIR:=extractfiledir(_BINDIR)
+      _DEPTOCOMDIR:=extractFileDir(_BINDIR)
     else
       _DEPTOCOMDIR:=_BINDIR;
-    setregistryvalue('bindir',_BINDIR);
-    setregistryvalue('deptocomdir',_DEPTOCOMDIR);
+    setRegistryValue('bindir',_BINDIR);
+    setRegistryValue('deptocomdir',_DEPTOCOMDIR);
   except
     on e:exception do
       logwarn(SOFTWARE_NAME+': app: initialization: '+e.classname+': '+e.message);
@@ -311,21 +311,21 @@ initialization
   //verifica a existência de um diretório para arquivos temporários
   //não existindo, tenta criá-lo
   try
-    straux:=specialdir(csidAppData);
+    straux:=getSpecialDir(csidAppData);
     //APENAS POR COMPLETUDE! NÃO OCORRE!
-    if not directoryexists(straux) then begin
+    if not directoryExists(straux) then begin
       logwarn(SOFTWARE_NAME+': app: initialization: o diretório '+straux+' não existe');
-      straux:=specialdir(csidMyDocuments);
-      if not directoryexists(straux) then
+      straux:=getSpecialDir(csidMyDocuments);
+      if not directoryExists(straux) then
         logwarn(SOFTWARE_NAME+': app: initialization: o diretório '+straux+' não existe');
     end;
 
     _TMPDIR:=straux+DIRECTORY_SEPARATOR+SOFTWARE_NAME;
-    if not directoryexists(_TMPDIR) then
-      if not forcedirectories(_TMPDIR) then begin
+    if not directoryExists(_TMPDIR) then
+      if not forceDirectories(_TMPDIR) then begin
         _TMPDIR:=_DEPTOCOMDIR+DIRECTORY_SEPARATOR+'temp';
-        if not directoryexists(_TMPDIR) then
-          if not forcedirectories(_TMPDIR) then
+        if not directoryExists(_TMPDIR) then
+          if not forceDirectories(_TMPDIR) then
             raise exception.create('NO TEMPORARY DIRECTORY');
       end;
   except
@@ -337,7 +337,7 @@ initialization
   end;
 
   try
-    setregistryvalue('tmpdir',_TMPDIR);
+    setRegistryValue('tmpdir',_TMPDIR);
   except
     on e:exception do
       logwarn(SOFTWARE_NAME+': app: initialization: '+e.classname+': '+e.message);
@@ -347,5 +347,5 @@ initialization
   errcode:=0;
 finalization
   if logfileOK then
-    closefile(logfile);
+    closeFile(logfile);
 end.
