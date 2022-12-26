@@ -14,6 +14,6 @@ var
 
 begin
   mainWindow:=window.create;
-  mainWindow.visible:=true;
+  myApp.mainWindow:=mainWindow;
   myApp.run;
 end.

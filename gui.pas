@@ -9,6 +9,7 @@ uses
   windows;
 
 type
+  Container=class;
   Component=class(TInterfacedObject)
   private
     fID:cardinal;
@@ -16,15 +17,17 @@ type
     fVisible,
     fEnabled
       :boolean;
+    fParent:Container;
     procedure setVisible(isVisible:boolean);      
   protected
     procedure setEnabled(isEnabled:boolean); virtual;
   public
-    constructor create;
+    constructor create(parent:Container=nil);virtual;
     destructor destroy;override;
     function equals(obj:TObject):boolean;
     property ID:cardinal read fID;
     property Handle:HWND read fHandle;
+    property Parent:Container read fParent;
     property Enabled:boolean read fEnabled write setEnabled;
     property Visible:boolean read fVisible write setVisible;
   end;
@@ -36,7 +39,7 @@ type
   protected
     fArrayOfComponents:array of Component;
   public
-    constructor create(const parentHandle:HWND=0);
+    constructor create(parent:Container=nil);
     destructor destroy;override;
     property Caption:PAnsiChar read fCaption write setCaption;
   end;
@@ -47,36 +50,32 @@ type
   protected
     //
   public
-    constructor create;
+    constructor create(parent:Window=nil);
     destructor destroy;override;
   end;
 
   Edit=class(Component)
-  private
-    fParentHandle:HWND;
   public
-    constructor create(parentHandle:HWND=0);
-    property parent:HWND read fParentHandle;
+    constructor create(parent:Container);override;
   end;
 
   Button=class(Component)
-  private
-    fParentHandle:HWND;
   public
-    constructor create(parentHandle:HWND=0);
-    property parent:HWND read fParentHandle;
+    constructor create(parent:Container);override;
   end;
 
   deptocomApp=class
   private
+    fMainWindow:Window;
+    procedure setMainWindow(mw:Window);
   public
     constructor create;
     procedure run;
+    property MainWindow:Window read fMainWindow write setMainWindow;
   end;
 
 var
   myApp:deptocomApp;
-  HAppInstance:integer;
 
 procedure hideConsole;
 procedure showConsole;
@@ -97,13 +96,16 @@ begin
 end;
 
 var
+  mainWindowHandle:HWND=0;
   componentID,
   windowNum
     :cardinal;
 
-constructor Component.create;
+constructor Component.create(parent:Container=nil);
 begin
   inherited create;
+  if Parent<>nil then
+    fParent:=parent;
   inc(componentID);
 end;
 
@@ -113,6 +115,7 @@ begin
   fID:=0;
   fEnabled:=false;
   fVisible:=false;
+  fParent:=nil;
   inherited destroy;
 end;
 
@@ -134,15 +137,15 @@ end;
 
 function Component.equals(obj:TObject):boolean;
 begin
-  if obj.ClassType<>self.ClassType then
+  if (obj=nil) or (obj.ClassType<>self.ClassType) then
     result:=false
   else
     result:=Component(obj).ID=Component(self).ID;
 end;
 
-constructor Container.create(const parentHandle:HWND=0);
+constructor Container.create(parent:Container=nil);
 begin
-  inherited create;
+  inherited create(parent);
 end;
 
 destructor Container.destroy;
@@ -169,7 +172,9 @@ function WindowProc(hwnd: HWND; uMsg: UINT; wParam: WPARAM; lParam: LPARAM):
 begin
   // This is the function Windows calls when a message is sent to the application
   case uMsg of // Check which message was sent
-    WM_DESTROY: PostQuitMessage(0); // Otherwise app will continue to run
+    WM_DESTROY:
+      if hwnd=mainWindowHandle then PostQuitMessage(0); // Otherwise app will continue to run
+
     // Handle any other messages here
     WM_ACTIVATE:;
     {
@@ -188,7 +193,10 @@ begin
   end;
 end;
 
-constructor Window.create;
+constructor Window.create(parent:Window=nil);
+var
+  styleFlags:cardinal;
+  parentHandle:HWND;
 begin
   inherited create;
   self.fID:=componentID;
@@ -199,7 +207,7 @@ begin
     lpfnWndProc := @WindowProc; // See function above
     cbClsExtra := 0; // no extra class memory
     cbWndExtra := 0; // no extra window memory
-    hInstance := HAppInstance; // application instance
+    hInstance := SysInit.HInstance; // application instance
     hIcon := 0; // use default icon
     hCursor := LoadCursor(0, IDC_ARROW); // use arrow cursor
     hbrBackground := COLOR_WINDOW; // standard window colour
@@ -209,18 +217,26 @@ begin
 
   Windows.RegisterClass(self.fWndClass); // Don't use Delphi's version of RegisterClass
 
+  if parent=nil then begin
+    styleFlags:=WS_OVERLAPPEDWINDOW;
+    parentHandle:=0;
+  end else begin
+    styleFlags:=WS_OVERLAPPEDWINDOW or WS_CHILD;
+    parentHandle:=parent.Handle;
+  end;
+
   self.fHandle:= CreateWindow(self.fWndClass.lpszClassName,
     PAnsiChar('Window'+intToStr(windowNum)), // window caption
-    WS_OVERLAPPEDWINDOW, // standard window style
+    styleFlags, // standard window style
     CW_USEDEFAULT, CW_USEDEFAULT, // default position
     880, 400, // size
-    0, // no owner window
+    parentHandle, // no owner window
     0, // no menu
-    hInstance, // application instance
+    SysInit.hInstance, // application instance
     nil);
 end;
 
-constructor Edit.create(parentHandle:HWND=0);
+constructor Edit.create(parent:Container);
 var
   hControlFont:HFONT;
   lfControl:TLogFont;
@@ -232,11 +248,11 @@ begin
     'Edit1',// Name of window - also the text that will be in it
     WS_CHILD OR WS_VISIBLE OR ES_AUTOHSCROLL OR ES_NOHIDESEL, // style flags
     8, 16, 160, 21, // Position and size
-    parentHandle, // Parent window
+    parent.Handle, // Parent window
     0, // Menu - none because it's an edit box(!)
-    HAppInstance, // Application instance
+    SysInit.HInstance, // Application instance
     nil); // No creation data
-  self.fParentHandle:=parent;
+  self.fParent:=parent;
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
     The first parameter of MulDiv is the point size. }
@@ -247,7 +263,7 @@ begin
   sendMessage(self.fHandle, WM_SETFONT, hControlFont, 1);
 end;
 
-constructor Button.create(parentHandle:HWND=0);
+constructor Button.create(parent:Container);
 var
   hControlFont:HFONT;
   lfControl:TLogFont;
@@ -258,11 +274,11 @@ begin
     'Show Message', // Name of window - also the text that will be in it
     WS_CHILD OR WS_VISIBLE OR BS_PUSHBUTTON OR BS_TEXT, // style flags
     8, 40, 96, 25, // Position and size
-    parentHandle, // Parent window
+    parent.Handle, // Parent window
     0, // Menu - none because it's a button
-    HAppInstance, // Application instance
+    SysInit.HInstance, // Application instance
     nil); // No creation data
-  self.fParentHandle:=parentHandle;
+  self.fParent:=parent;
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
     The first parameter of MulDiv is the point size. }
@@ -276,21 +292,36 @@ end;
 constructor deptocomApp.create;
 begin
   inherited create;
+  fMainWindow:=nil;
+end;
+
+procedure deptocomApp.setMainWindow(mw:Window);
+begin
+  if mainWindowHandle<>0 then
+    raise exception.create('Já há uma MainWindow definida. Não é possível redefiní-la.');
+  if mw<>nil then begin
+    self.fMainWindow:=mw;
+    mainWindowHandle:=mw.Handle;
+  end;
 end;
 
 procedure deptocomApp.run;
 var
   msg:tmsg;
 begin
-  while getMessage(msg,0,0,0)<>BOOL(FALSE) do begin
-    translateMessage(msg);
-    dispatchMessage(msg);
+  if self.fMainWindow<>nil then begin
+    self.fMainWindow.Visible:=true;
+    while getMessage(msg,0,0,0)<>BOOL(FALSE) do begin
+      translateMessage(msg);
+      dispatchMessage(msg);
+    end;
   end;
 end;
 
 initialization
   componentID:=0;
   windowNum:=0;
+  myApp:=deptocomApp.create;
 finalization
   componentID:=0;
   windowNum:=0;
