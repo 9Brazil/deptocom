@@ -1,9 +1,6 @@
 program deptocom;
 
 uses
-  Windows,
-  Messages,
-  sysutils,
   app in 'app.pas',
   locale in 'locale.pas',
   gui in 'gui.pas',

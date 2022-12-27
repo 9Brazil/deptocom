@@ -39,7 +39,6 @@ type
   protected
     fArrayOfComponents:array of Component;
   public
-    constructor create(parent:Container=nil);
     property Caption:PAnsiChar read fCaption write setCaption;
   end;
 
@@ -105,6 +104,7 @@ begin
   if Parent<>nil then
     fParent:=parent;
   inc(componentID);
+  fID:=componentID;
 end;
 
 destructor Component.destroy;
@@ -139,11 +139,6 @@ begin
     result:=false
   else
     result:=Component(obj).ID=Component(self).ID;
-end;
-
-constructor Container.create(parent:Container=nil);
-begin
-  inherited create(parent);
 end;
 
 procedure Container.setCaption(const newCaption:PAnsiChar);
@@ -187,7 +182,6 @@ var
   parentHandle:HWND;
 begin
   inherited create(parent);
-  self.fID:=componentID;
   inc(windowNum);
   // Set up window class
   with self.fWndClass do begin
@@ -228,19 +222,22 @@ constructor Edit.create(parent:Container);
 var
   hControlFont:HFONT;
   lfControl:TLogFont;
+  parentHandle:HWND;
 begin
-  inherited create;
-  self.fID:=componentID;
+  inherited create(parent);
+  if parent=nil then
+    parentHandle:=0
+  else
+    parentHandle:=parent.Handle;
   self.fHandle:=createWindowEx(WS_EX_CLIENTEDGE, // Extended style
     'EDIT', // EDIT creates an edit box
     'Edit1',// Name of window - also the text that will be in it
     WS_CHILD OR WS_VISIBLE OR ES_AUTOHSCROLL OR ES_NOHIDESEL, // style flags
     8, 16, 160, 21, // Position and size
-    parent.Handle, // Parent window
+    parentHandle, // Parent window
     0, // Menu - none because it's an edit box(!)
     SysInit.HInstance, // Application instance
     nil); // No creation data
-  self.fParent:=parent;
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
     The first parameter of MulDiv is the point size. }
@@ -255,18 +252,21 @@ constructor Button.create(parent:Container);
 var
   hControlFont:HFONT;
   lfControl:TLogFont;
+  parentHandle:HWND;
 begin
-  inherited create;
-  self.fID:=componentID;
+  inherited create(parent);
+  if parent=nil then
+    parentHandle:=0
+  else
+    parentHandle:=parent.Handle;
   self.fHandle:=createWindow('BUTTON', // BUTTON creates an button, obviously
     'Show Message', // Name of window - also the text that will be in it
     WS_CHILD OR WS_VISIBLE OR BS_PUSHBUTTON OR BS_TEXT, // style flags
     8, 40, 96, 25, // Position and size
-    parent.Handle, // Parent window
+    parentHandle, // Parent window
     0, // Menu - none because it's a button
     SysInit.HInstance, // Application instance
     nil); // No creation data
-  self.fParent:=parent;
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
     The first parameter of MulDiv is the point size. }
