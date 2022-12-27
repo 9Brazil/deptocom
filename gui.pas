@@ -40,7 +40,6 @@ type
     fArrayOfComponents:array of Component;
   public
     constructor create(parent:Container=nil);
-    destructor destroy;override;
     property Caption:PAnsiChar read fCaption write setCaption;
   end;
 
@@ -51,7 +50,6 @@ type
     //
   public
     constructor create(parent:Window=nil);
-    destructor destroy;override;
   end;
 
   Edit=class(Component)
@@ -148,11 +146,6 @@ begin
   inherited create(parent);
 end;
 
-destructor Container.destroy;
-begin
-  inherited destroy;
-end;
-
 procedure Container.setCaption(const newCaption:PAnsiChar);
 begin
   if newCaption<>self.fCaption then
@@ -160,11 +153,6 @@ begin
     setWindowText(self.Handle,newCaption);
     fCaption:=newCaption;
   end;
-end;
-
-destructor Window.destroy;
-begin
-  inherited destroy;
 end;
 
 function WindowProc(hwnd: HWND; uMsg: UINT; wParam: WPARAM; lParam: LPARAM):
