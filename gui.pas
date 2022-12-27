@@ -6,6 +6,7 @@ uses
   classes,
   dialogs,
   messages,
+  graphics,
   windows;
 
 type
@@ -18,18 +19,34 @@ type
     fEnabled
       :boolean;
     fParent:Container;
-    procedure setVisible(isVisible:boolean);      
+    fLeft,
+    fTop,
+    fHeight,
+    fWidth
+      :integer;
+    procedure setVisible(isVisible:boolean);
+    procedure _setSize(const x,y,width,height:integer);
+    procedure setLeft(const x:integer);
+    procedure setTop(const y:integer);
+    procedure setWidth(const width:integer);
+    procedure setHeight(const height:integer);
   protected
     procedure setEnabled(isEnabled:boolean); virtual;
+    function _WM_PAINT(wParam: WPARAM; lParam: LPARAM):LRESULT;virtual;
   public
     constructor create(parent:Container=nil);virtual;
     destructor destroy;override;
     function equals(obj:TObject):boolean;
+    procedure setSize(const x,y,width,height:integer);
     property ID:cardinal read fID;
     property Handle:HWND read fHandle;
     property Parent:Container read fParent;
     property Enabled:boolean read fEnabled write setEnabled;
     property Visible:boolean read fVisible write setVisible;
+    property Left:integer read fLeft write setLeft;
+    property Top:integer read fTop write setTop;
+    property Width:integer read fWidth write setWidth;
+    property Height:integer read fHeight write setHeight;
   end;
 
   Container=class(Component)
@@ -98,19 +115,30 @@ var
   windowNum
     :cardinal;
 
+var
+  arrayOfComponents:array of Component;
+  mapHandleID:tstringlist;
+
 constructor Component.create(parent:Container=nil);
 begin
   inherited create;
-  if Parent<>nil then
+  if parent<>nil then
     fParent:=parent;
   inc(componentID);
   fID:=componentID;
+  setLength(arrayOfComponents,componentID);
 end;
 
 destructor Component.destroy;
 begin
   if fHandle<>0 then destroyWindow(fHandle);
+  arrayOfComponents[fID-1]:=nil;
+  fHandle:=0;
   fID:=0;
+  fLeft:=0;
+  fTop:=0;
+  fWidth:=0;
+  fHeight:=0;
   fEnabled:=false;
   fVisible:=false;
   fParent:=nil;
@@ -124,7 +152,7 @@ end;
 
 procedure Component.setVisible(isVisible:boolean);
 begin
-  if isVisible<>fVisible then begin
+  if (fHandle<>0) and (isVisible<>fVisible) then begin
     fVisible:=isVisible;
     if isVisible then
       showWindow(self.fHandle,SW_SHOWNORMAL)
@@ -141,37 +169,85 @@ begin
     result:=Component(obj).ID=Component(self).ID;
 end;
 
+procedure Component._setSize(const x,y,width,height:integer);
+begin
+  if (fHandle<>0) and ((x<>fLeft) or (y<>fTop) or (width<>fWidth) or (height<>fHeight)) then begin
+    fLeft:=x;
+    fTop:=y;
+    fWidth:=width;
+    fHeight:=height;
+
+    if self is Window then
+      setWindowPos(fHandle,0,x,y,width,height,SWP_FRAMECHANGED);
+  end;
+end;
+
+procedure Component.setSize(const x,y,width,height:integer);
+begin
+  _setSize(x,y,width,height);
+end;
+
+procedure Component.setLeft(const x:integer);
+begin
+  _setSize(x,fTop,fWidth,fHeight);
+end;
+
+procedure Component.setTop(const y:integer);
+begin
+  _setSize(fLeft,y,fWidth,fHeight);
+end;
+
+procedure Component.setWidth(const width:integer);
+begin
+  _setSize(fLeft,fTop,width,fHeight);
+end;
+
+procedure Component.setHeight(const height:integer);
+begin
+  _setSize(fLeft,fTop,fWidth,height);
+end;
+
+function Component._WM_PAINT(wParam: WPARAM; lParam: LPARAM):LRESULT;
+begin
+  result:=DefWindowProc(fHandle, WM_PAINT, wParam, lParam);
+end;
+
 procedure Container.setCaption(const newCaption:PAnsiChar);
 begin
-  if newCaption<>self.fCaption then
+  if (fHandle<>0) and (newCaption<>self.fCaption) then
   begin
     setWindowText(self.Handle,newCaption);
     fCaption:=newCaption;
   end;
 end;
 
+function hWndToID(const hWnd:HWND):integer;
+begin
+  result:=strtoint(mapHandleID.Values[inttostr(hWND)]);
+end;
+
+function getComponent(const hWnd:HWND):Component;
+begin
+  result:=arrayOfComponents[hWndToID(hWnd)-1];
+end;
+
 function WindowProc(hwnd: HWND; uMsg: UINT; wParam: WPARAM; lParam: LPARAM):
   LRESULT; stdcall;
+var
+  _component:Component;
 begin
-  // This is the function Windows calls when a message is sent to the application
-  case uMsg of // Check which message was sent
+  case uMsg of
     WM_DESTROY:
-      if hwnd=mainWindowHandle then PostQuitMessage(0); // Otherwise app will continue to run
+      if hwnd=mainWindowHandle then//apenas o fechamento da janela principal pode encerrar a aplicação!
+        PostQuitMessage(0);
 
-    // Handle any other messages here
-    WM_ACTIVATE:;
-    {
-    WM_COMMAND:
-      begin
-        Result := 0; // Default return value for this message
-        if lParam = Button1 then
-          case wParam of
-            BN_CLICKED: Button1Click; // Button was clicked
-          else Result := DefWindowProc(hwnd, uMsg, wParam, lParam);
-          end; // case wNotifyCode of
-      end; // case: WM_COMMAND
+    WM_PAINT:begin
+      _component:=getComponent(hWnd);
+      if _component<>nil then
+        result:=_component._WM_PAINT(wParam,lParam);
+    end;
+
     // Use default message processing
-    }
     else Result := DefWindowProc(hwnd, uMsg, wParam, lParam);
   end;
 end;
@@ -194,7 +270,7 @@ begin
     hCursor := LoadCursor(0, IDC_ARROW); // use arrow cursor
     hbrBackground := COLOR_WINDOW; // standard window colour
     lpszMenuName := nil; // no menu resource
-    lpszClassName := pansichar(ansistring(classname));
+    lpszClassName := PAnsiChar(ansistring(classname));
   end;
 
   Windows.RegisterClass(self.fWndClass); // Don't use Delphi's version of RegisterClass
@@ -207,15 +283,22 @@ begin
     parentHandle:=parent.Handle;
   end;
 
+  fLeft:=40;
+  fTop:=40;
+  fWidth:=400;
+  fHeight:=200;
+
   self.fHandle:= CreateWindow(self.fWndClass.lpszClassName,
     PAnsiChar('Window'+intToStr(windowNum)), // window caption
     styleFlags, // standard window style
-    CW_USEDEFAULT, CW_USEDEFAULT, // default position
-    880, 400, // size
+    fLeft,fTop,//CW_USEDEFAULT, CW_USEDEFAULT, // default position
+    fWidth, fHeight, // size
     parentHandle, // no owner window
     0, // no menu
     SysInit.hInstance, // application instance
     nil);
+    arrayOfComponents[fID-1]:=self;
+    mapHandleID.add(inttostr(fHandle)+'='+inttostr(fID));
 end;
 
 constructor Edit.create(parent:Container);
@@ -225,10 +308,13 @@ var
   parentHandle:HWND;
 begin
   inherited create(parent);
-  if parent=nil then
-    parentHandle:=0
-  else
+  if parent=nil then begin
+    parentHandle:=0;
+    fParent:=nil;
+  end else begin
     parentHandle:=parent.Handle;
+    fParent:=parent;
+  end;
   self.fHandle:=createWindowEx(WS_EX_CLIENTEDGE, // Extended style
     'EDIT', // EDIT creates an edit box
     'Edit1',// Name of window - also the text that will be in it
@@ -238,6 +324,10 @@ begin
     0, // Menu - none because it's an edit box(!)
     SysInit.HInstance, // Application instance
     nil); // No creation data
+
+  arrayOfComponents[fID-1]:=self;
+  mapHandleID.add(inttostr(fHandle)+'='+inttostr(fID));
+
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
     The first parameter of MulDiv is the point size. }
@@ -255,10 +345,13 @@ var
   parentHandle:HWND;
 begin
   inherited create(parent);
-  if parent=nil then
-    parentHandle:=0
-  else
+  if parent=nil then begin
+    parentHandle:=0;
+    fParent:=nil;
+  end else begin
     parentHandle:=parent.Handle;
+    fParent:=parent;
+  end;
   self.fHandle:=createWindow('BUTTON', // BUTTON creates an button, obviously
     'Show Message', // Name of window - also the text that will be in it
     WS_CHILD OR WS_VISIBLE OR BS_PUSHBUTTON OR BS_TEXT, // style flags
@@ -267,6 +360,10 @@ begin
     0, // Menu - none because it's a button
     SysInit.HInstance, // Application instance
     nil); // No creation data
+
+  arrayOfComponents[fID-1]:=self;
+  mapHandleID.add(inttostr(fHandle)+'='+inttostr(fID));
+
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
     The first parameter of MulDiv is the point size. }
@@ -309,6 +406,7 @@ end;
 initialization
   componentID:=0;
   windowNum:=0;
+  mapHandleID:=tstringlist.create;
   myApp:=deptocomApp.create;
 finalization
   componentID:=0;
