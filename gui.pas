@@ -186,7 +186,7 @@ var
   styleFlags:cardinal;
   parentHandle:HWND;
 begin
-  inherited create;
+  inherited create(parent);
   self.fID:=componentID;
   inc(windowNum);
   // Set up window class

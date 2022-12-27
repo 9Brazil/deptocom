@@ -13,7 +13,7 @@ var
   mainWindow:Window;
 
 begin
-  mainWindow:=window.create;
-  myApp.mainWindow:=mainWindow;
+  mainWindow:=Window.create;
+  myApp.MainWindow:=mainWindow;
   myApp.run;
 end.
