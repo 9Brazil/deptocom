@@ -1,5 +1,7 @@
 program deptocom;
 
+{$APPTYPE Console}
+
 uses
   app in 'app.pas',
   locale in 'locale.pas',

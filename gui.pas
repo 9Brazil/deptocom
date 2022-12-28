@@ -32,7 +32,7 @@ type
     procedure setHeight(const height:integer);
   protected
     procedure setEnabled(isEnabled:boolean); virtual;
-    function _WM_PAINT(wParam: WPARAM; lParam: LPARAM):LRESULT;virtual;
+    procedure _WM_PAINT(var canvas:tcanvas);virtual;
   public
     constructor create(parent:Container=nil);virtual;
     destructor destroy;override;
@@ -63,7 +63,7 @@ type
   private
     fWndClass:TWndClass;
   protected
-    //
+    procedure _WM_PAINT(var canvas:tcanvas);override;
   public
     constructor create(parent:Window=nil);
   end;
@@ -102,12 +102,20 @@ uses
 function GetConsoleWindow: HWND; stdcall; external kernel32;
 procedure hideConsole;
 begin
-  showWindow(GetConsoleWindow, SW_HIDE);
+  if isConsole then
+    showWindow(GetConsoleWindow, SW_HIDE);
 end;
 procedure showConsole;
 begin
-  showWindow(GetConsoleWindow, SW_NORMAL);
+  if isConsole then
+    showWindow(GetConsoleWindow, SW_NORMAL);
 end;
+
+const
+  DEFAULT_WINDOW_X=40;
+  DEFAULT_WINDOW_Y=40;
+  DEFAULT_WINDOW_WIDTH=400;
+  DEFAULT_WINDOW_HEIGHT=200;
 
 var
   mainWindowHandle:HWND=0;
@@ -207,9 +215,9 @@ begin
   _setSize(fLeft,fTop,fWidth,height);
 end;
 
-function Component._WM_PAINT(wParam: WPARAM; lParam: LPARAM):LRESULT;
+procedure Component._WM_PAINT(var canvas:tcanvas);
 begin
-  result:=DefWindowProc(fHandle, WM_PAINT, wParam, lParam);
+  //NADA!
 end;
 
 procedure Container.setCaption(const newCaption:PAnsiChar);
@@ -235,21 +243,28 @@ function WindowProc(hwnd: HWND; uMsg: UINT; wParam: WPARAM; lParam: LPARAM):
   LRESULT; stdcall;
 var
   _component:Component;
+  _canvas:tcanvas;
 begin
+  //usamos o processamento default de mensagem
+  result:=defWindowProc(hwnd,uMsg,wParam,lParam);
+
   case uMsg of
     WM_DESTROY:
       if hwnd=mainWindowHandle then//apenas o fechamento da janela principal pode encerrar a aplicação!
         PostQuitMessage(0);
 
     WM_PAINT:begin
-      _component:=getComponent(hWnd);
-      if _component<>nil then
-        result:=_component._WM_PAINT(wParam,lParam);
-    end;
+      _component:=getComponent(hWnd); //obtemos o componente destinatário da mensagem
+      if _component<>nil then begin   //e delegamos um canvas para a procedure _WM_PAINT do componente
+        _canvas:=tcanvas.create;      //para que ela faça o trabalho
+        _canvas.handle:=getDC(hWnd);
+        _component._WM_PAINT(_canvas);
+        releaseDC(hWnd,_canvas.handle);
+        _canvas.free;//NÃO LIBERE O CANVAS NA PROCEDURE _WM_PAINT!
+      end;//end-if
+    end;//end-WM_PAINT
 
-    // Use default message processing
-    else Result := DefWindowProc(hwnd, uMsg, wParam, lParam);
-  end;
+  end;//end-case
 end;
 
 constructor Window.create(parent:Window=nil);
@@ -273,7 +288,7 @@ begin
     lpszClassName := PAnsiChar(ansistring(classname));
   end;
 
-  Windows.RegisterClass(self.fWndClass); // Don't use Delphi's version of RegisterClass
+  Windows.RegisterClass(self.fWndClass);  //Don't use Delphi's version of RegisterClass
 
   if parent=nil then begin
     styleFlags:=WS_OVERLAPPEDWINDOW;
@@ -283,10 +298,10 @@ begin
     parentHandle:=parent.Handle;
   end;
 
-  fLeft:=40;
-  fTop:=40;
-  fWidth:=400;
-  fHeight:=200;
+  fLeft:=DEFAULT_WINDOW_X;
+  fTop:=DEFAULT_WINDOW_Y;
+  fWidth:=DEFAULT_WINDOW_WIDTH;
+  fHeight:=DEFAULT_WINDOW_HEIGHT;
 
   self.fHandle:= CreateWindow(self.fWndClass.lpszClassName,
     PAnsiChar('Window'+intToStr(windowNum)), // window caption
@@ -299,6 +314,22 @@ begin
     nil);
     arrayOfComponents[fID-1]:=self;
     mapHandleID.add(inttostr(fHandle)+'='+inttostr(fID));
+end;
+
+procedure Window._WM_PAINT(var canvas:tcanvas);
+var
+  _rect:trect;
+begin
+  inherited _WM_PAINT(canvas);
+  _rect.Left:=50;
+  _rect.Top:=50;
+  _rect.Bottom:=150;
+  _rect.Right:=200;
+  canvas.FillRect(_rect);
+  canvas.Ellipse(60,60,200,200);
+  canvas.PenPos:=point(90,100);
+  canvas.LineTo(90,400);
+  writeln('Window._WM_PAINT(wParam: WPARAM; lParam: LPARAM):LRESULT;');
 end;
 
 constructor Edit.create(parent:Container);
@@ -404,6 +435,8 @@ begin
 end;
 
 initialization
+  if not isConsole then
+    writeln('redirecionamos a saída padrão para o arquivo debug.log');
   componentID:=0;
   windowNum:=0;
   mapHandleID:=tstringlist.create;
