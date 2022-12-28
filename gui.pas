@@ -98,6 +98,7 @@ var
 
 procedure hideConsole;
 procedure showConsole;
+function SCREEN_SIZE:trect;
 
 implementation
 
@@ -117,6 +118,14 @@ begin
     showWindow(GetConsoleWindow, SW_NORMAL);
 end;
 
+function SCREEN_SIZE:trect;
+begin
+  result.left:=0;
+  result.top:=0;
+  result.right:=GetSystemMetrics(SM_CXSCREEN);
+  result.bottom:=GetSystemMetrics(SM_CYSCREEN);
+end;
+
 var
   mainWindowHandle:HWND=0;
   componentID,
@@ -124,8 +133,9 @@ var
     :cardinal;
 
 var
-  arrayOfComponents:array of Component;
-  handleIdMap:tstringlist;
+  arrayOfComponents:array of Component; //todo componente criado vem para esse array...
+                                        //os que foram liberados da memória marcamos com nil
+  handleIdMap:tstringlist;  //nosso mapa key-value para hWnd-ID (!precisamos de algo melhor!)
 
 constructor Component.create(parent:Container=nil);
 begin
@@ -231,7 +241,8 @@ end;
 
 function hWndToID(const hWnd:HWND):integer;
 begin
-  result:=strtoint(handleIdMap.Values[inttostr(hWND)]);
+  result:=strtoint(handleIdMap.Values[inttostr(hWND)]); //possivelmente usar tstringlist como mapa key-value não é uma boa, mas...
+                                                        //aceite como provisório!
 end;
 
 function getComponent(const hWnd:HWND):Component;
@@ -278,7 +289,7 @@ begin
   // Set up window class
   with self.fWndClass do begin
     Style := 0;
-    lpfnWndProc := @WindowProc; // See function above
+    lpfnWndProc := @WindowProc;
     cbClsExtra := 0; // no extra class memory
     cbWndExtra := 0; // no extra window memory
     hInstance := SysInit.HInstance; // application instance
