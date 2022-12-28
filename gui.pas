@@ -107,7 +107,6 @@ function SCREEN_SIZE:trect;
 implementation
 
 uses
-  dwmapi,
   sysUtils;
 
 function GetConsoleWindow: HWND; stdcall; external kernel32;
@@ -340,7 +339,6 @@ constructor Window.create(parent:Window=nil);
 var
   styleFlags:cardinal;
   parentHandle:HWND;
-  flagArredondamentoCantosJanela:integer;
 begin
   inherited create(parent);
   inc(windowNum);
@@ -385,9 +383,6 @@ begin
 
   arrayOfComponents[fID-1]:=self;
   hWndIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
-
-  flagArredondamentoCantosJanela:=DWMWCP_DONOTROUND;
-  DwmSetWindowAttribute(fHandle,DWMWA_WINDOW_CORNER_PREFERENCE,@flagArredondamentoCantosJanela,sizeOf(integer));
 end;
 
 procedure Window._WM_PAINT(var canvas:tcanvas);

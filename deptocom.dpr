@@ -7,7 +7,6 @@ uses
   locale in 'locale.pas',
   gui in 'gui.pas',
   threads in 'threads.pas',
-  dwmapi in 'dwmapi.pas',
   mwFastTime in 'mwFastTime.pas';
 
 var
