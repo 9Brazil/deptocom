@@ -15,7 +15,10 @@ const
   DEFAULT_WINDOW_HEIGHT=200;
 
 type
+  WindowState=(wsNormal, wsMinimized, wsMaximized);
+
   Container=class;
+
   Component=class(TInterfacedObject)
   private
     fID:cardinal;
@@ -67,6 +70,7 @@ type
   Window=class(Container)
   private
     fWndClass:TWndClass;
+    fWindowState:WindowState;
   protected
     procedure _WM_PAINT(var canvas:tcanvas);override;
   public
@@ -135,7 +139,7 @@ var
 var
   arrayOfComponents:array of Component; //todo componente criado vem para esse array...
                                         //os que foram liberados da memória marcamos com nil
-  handleIdMap:tstringlist;  //nosso mapa key-value para hWnd-ID (!precisamos de algo melhor!)
+  hWndIdMap:tstringlist;                //nosso mapa key-value para hWnd-ID (!precisamos de algo melhor!)
 
 constructor Component.create(parent:Container=nil);
 begin
@@ -241,8 +245,8 @@ end;
 
 function hWndToID(const hWnd:HWND):integer;
 begin
-  result:=strtoint(handleIdMap.Values[inttostr(hWND)]); //possivelmente usar tstringlist como mapa key-value não é uma boa, mas...
-                                                        //aceite como provisório!
+  result:=strtoint(hWndIdMap.Values[inttostr(hWND)]); //possivelmente usar tstringlist como mapa key-value não é uma boa, mas...
+                                                      //aceite como provisório!
 end;
 
 function getComponent(const hWnd:HWND):Component;
@@ -250,32 +254,86 @@ begin
   result:=arrayOfComponents[hWndToID(hWnd)-1];
 end;
 
-function WindowProc(hwnd: HWND; uMsg: UINT; wParam: WPARAM; lParam: LPARAM):
+function WindowProc(hndl: HWND; uMsg: UINT; wParam: WPARAM; lParam: LPARAM):
   LRESULT; stdcall;
 var
   _component:Component;
   _canvas:tcanvas;
+  wParamLWord,
+  wParamHWord,
+  lParamLWord,
+  lParamHWord
+    :WORD;
 begin
   //usamos o processamento default de mensagem
-  result:=defWindowProc(hwnd,uMsg,wParam,lParam);
+  result:=defWindowProc(hndl,uMsg,wParam,lParam);
+
+  wParamLWord:=LOWORD(wParam);
+  wParamHWord:=HIWORD(wParam);
+
+  lParamLWord:=LOWORD(lParam);
+  lParamHWord:=HIWORD(lParam);
 
   case uMsg of
     WM_DESTROY:
-      if hwnd=mainWindowHandle then//apenas o fechamento da janela principal pode encerrar a aplicação!
+      if hndl=mainWindowHandle then//apenas o fechamento da janela principal pode encerrar a aplicação!
         PostQuitMessage(0);
 
     WM_PAINT:begin
-      _component:=getComponent(hWnd); //obtemos o componente destinatário da mensagem
+      _component:=getComponent(hndl); //obtemos o componente destinatário da mensagem
       if _component<>nil then begin   //e delegamos um canvas para a procedure _WM_PAINT do componente
         _canvas:=tcanvas.create;      //para que ela faça o trabalho
-        _canvas.handle:=getDC(hWnd);
+        _canvas.handle:=getDC(hndl);
         _component._WM_PAINT(_canvas);
-        releaseDC(hWnd,_canvas.handle);
+        releaseDC(hndl,_canvas.handle);
         _canvas.free;//NÃO LIBERE O CANVAS NA PROCEDURE _WM_PAINT!
       end;//end-if
-    end;//end-WM_PAINT
+    end;//case:WM_PAINT
 
-  end;//end-case
+    //v. https://learn.microsoft.com/pt-br/windows/win32/menurc/wm-command
+    WM_COMMAND:begin
+      case wParamHWord+lParam{fonte da mensagem} of
+
+        //MENU
+        0:begin
+
+        end;//MENU-fim
+
+        //ACELERADOR
+        1:begin
+
+        end//ACELERADOR-fim
+
+        //CONTROLE
+        else begin
+
+          case wParamHWord{código da mensagem/notificação do controle} of
+
+            //um botão foi clicado
+            BN_CLICKED{=0}:begin
+              _component:=getComponent(HWND(lParam));
+              if _component<>nil then begin
+                //
+                //
+                //
+              end;
+            end;//BN_CLICKED-fim
+
+          end;//case:código da mensagem/notificação do controle (wParamHWord)
+
+        end;//CONTROLE-fim
+
+      end;//case:fonte da mensagem (wParamHWord+lParam)
+
+    end;//case:WM_COMMAND
+
+
+    //
+    //outras mensagens
+    //
+
+
+  end;//case:uMsg
 end;
 
 constructor Window.create(parent:Window=nil);
@@ -316,17 +374,17 @@ begin
   fHeight:=DEFAULT_WINDOW_HEIGHT;
 
   self.fHandle:= CreateWindow(self.fWndClass.lpszClassName,
-    PAnsiChar('Window'+intToStr(windowNum)), // window caption
-    styleFlags, // standard window style
-    fLeft,fTop,//CW_USEDEFAULT, CW_USEDEFAULT, // default position
-    fWidth, fHeight, // size
-    parentHandle, // no owner window
-    0, // no menu
-    SysInit.hInstance, // application instance
+    PAnsiChar('Window'+intToStr(windowNum)),  //window caption
+    styleFlags, //standard window style
+    fLeft,fTop,
+    fWidth, fHeight,  //size
+    parentHandle, //no owner window
+    0,  //no menu
+    SysInit.hInstance,  //application instance
     nil);
 
   arrayOfComponents[fID-1]:=self;
-  handleIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
+  hWndIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
 
   flagArredondamentoCantosJanela:=DWMWCP_DONOTROUND;
   DwmSetWindowAttribute(fHandle,DWMWA_WINDOW_CORNER_PREFERENCE,@flagArredondamentoCantosJanela,sizeOf(integer));
@@ -373,7 +431,7 @@ begin
     nil); // No creation data
 
   arrayOfComponents[fID-1]:=self;
-  handleIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
+  hWndIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
 
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
@@ -409,7 +467,7 @@ begin
     nil); // No creation data
 
   arrayOfComponents[fID-1]:=self;
-  handleIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
+  hWndIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
 
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
@@ -455,7 +513,7 @@ initialization
     writeln('redirecionamos a saída padrão para o arquivo debug.log');
   componentID:=0;
   windowNum:=0;
-  handleIdMap:=tstringlist.create;
+  hWndIdMap:=tstringlist.create;
   myApp:=deptocomApp.create;
 finalization
   componentID:=0;
