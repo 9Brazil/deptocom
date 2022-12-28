@@ -32,13 +32,13 @@ type
     fTop,
     fHeight,
     fWidth
-      :integer;
+      :int32;
     procedure setVisible(isVisible:boolean);
-    procedure _setSize(const x,y,width,height:integer);
-    procedure setLeft(const x:integer);
-    procedure setTop(const y:integer);
-    procedure setWidth(const width:integer);
-    procedure setHeight(const height:integer);
+    procedure _setSize(const x,y,width,height:int32);
+    procedure setLeft(const x:int32);
+    procedure setTop(const y:int32);
+    procedure setWidth(const width:int32);
+    procedure setHeight(const height:int32);
   protected
     procedure setEnabled(isEnabled:boolean); virtual;
     procedure _WM_PAINT(var canvas:tcanvas);virtual;
@@ -46,16 +46,16 @@ type
     constructor create(parent:Container=nil);virtual;
     destructor destroy;override;
     function equals(obj:TObject):boolean;
-    procedure setSize(const x,y,width,height:integer);
+    procedure setSize(const x,y,width,height:int32);
     property ID:cardinal read fID;
     property Handle:HWND read fHandle;
     property Parent:Container read fParent;
     property Enabled:boolean read fEnabled write setEnabled;
     property Visible:boolean read fVisible write setVisible;
-    property Left:integer read fLeft write setLeft;
-    property Top:integer read fTop write setTop;
-    property Width:integer read fWidth write setWidth;
-    property Height:integer read fHeight write setHeight;
+    property Left:int32 read fLeft write setLeft;
+    property Top:int32 read fTop write setTop;
+    property Width:int32 read fWidth write setWidth;
+    property Height:int32 read fHeight write setHeight;
   end;
 
   Container=class(Component)
@@ -153,9 +153,9 @@ begin
   if (fHandle<>0) and (isVisible<>fVisible) then begin
     fVisible:=isVisible;
     if isVisible then
-      showWindow(self.fHandle,SW_SHOWNORMAL)
+      showWindow(fHandle,SW_SHOWNORMAL)
     else
-      showWindow(self.fHandle,SW_HIDE);
+      showWindow(fHandle,SW_HIDE);
   end;
 end;
 
@@ -167,7 +167,7 @@ begin
     result:=Component(obj).ID=Component(self).ID;
 end;
 
-procedure Component._setSize(const x,y,width,height:integer);
+procedure Component._setSize(const x,y,width,height:int32);
 begin
   if (fHandle<>0) and ((x<>fLeft) or (y<>fTop) or (width<>fWidth) or (height<>fHeight)) then begin
     fLeft:=x;
@@ -180,27 +180,27 @@ begin
   end;
 end;
 
-procedure Component.setSize(const x,y,width,height:integer);
+procedure Component.setSize(const x,y,width,height:int32);
 begin
   _setSize(x,y,width,height);
 end;
 
-procedure Component.setLeft(const x:integer);
+procedure Component.setLeft(const x:int32);
 begin
   _setSize(x,fTop,fWidth,fHeight);
 end;
 
-procedure Component.setTop(const y:integer);
+procedure Component.setTop(const y:int32);
 begin
   _setSize(fLeft,y,fWidth,fHeight);
 end;
 
-procedure Component.setWidth(const width:integer);
+procedure Component.setWidth(const width:int32);
 begin
   _setSize(fLeft,fTop,width,fHeight);
 end;
 
-procedure Component.setHeight(const height:integer);
+procedure Component.setHeight(const height:int32);
 begin
   _setSize(fLeft,fTop,fWidth,height);
 end;
@@ -219,7 +219,7 @@ begin
   end;
 end;
 
-function hWndToID(const hWnd:HWND):integer;
+function hWndToID(const hWnd:HWND):int32;
 begin
   result:=strtoint(hWndIdMap.Values[inttostr(hWND)]); //possivelmente usar tstringlist como mapa key-value não é uma boa, mas...
                                                       //aceite como provisório!
@@ -320,7 +320,7 @@ begin
   inherited create(parent);
   inc(windowNum);
   // Set up window class
-  with self.fWndClass do begin
+  with fWndClass do begin
     Style := 0;
     lpfnWndProc := @WindowProc;
     cbClsExtra := 0; // no extra class memory
@@ -348,7 +348,7 @@ begin
   fWidth:=DEFAULT_WINDOW_WIDTH;
   fHeight:=DEFAULT_WINDOW_HEIGHT;
 
-  self.fHandle:= CreateWindow(self.fWndClass.lpszClassName,
+  fHandle:= CreateWindow(fWndClass.lpszClassName,
     PAnsiChar('Window'+intToStr(windowNum)),  //window caption
     styleFlags, //standard window style
     fLeft,fTop,
@@ -357,6 +357,11 @@ begin
     0,  //no menu
     SysInit.hInstance,  //application instance
     nil);
+
+  if fHandle=0 then begin
+    LogError('libgui: não foi possível criar a janela');
+    Exit;
+  end;
 
   arrayOfComponents[fID-1]:=self;
   hWndIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
@@ -375,7 +380,6 @@ begin
   canvas.Ellipse(60,60,200,200);
   canvas.PenPos:=point(90,100);
   canvas.LineTo(90,400);
-  writeln('Window._WM_PAINT(wParam: WPARAM; lParam: LPARAM):LRESULT;');
 end;
 
 constructor Edit.create(parent:Container);
@@ -392,7 +396,7 @@ begin
     parentHandle:=parent.Handle;
     fParent:=parent;
   end;
-  self.fHandle:=createWindowEx(WS_EX_CLIENTEDGE, // Extended style
+  fHandle:=createWindowEx(WS_EX_CLIENTEDGE, // Extended style
     'EDIT', // EDIT creates an edit box
     'Edit1',// Name of window - also the text that will be in it
     WS_CHILD OR WS_VISIBLE OR ES_AUTOHSCROLL OR ES_NOHIDESEL, // style flags
@@ -401,6 +405,11 @@ begin
     0, // Menu - none because it's an edit box(!)
     SysInit.HInstance, // Application instance
     nil); // No creation data
+
+  if fHandle=0 then begin
+    LogError('libgui: não foi possível criar o edit');
+    Exit;
+  end;
 
   arrayOfComponents[fID-1]:=self;
   hWndIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
@@ -429,7 +438,7 @@ begin
     parentHandle:=parent.Handle;
     fParent:=parent;
   end;
-  self.fHandle:=createWindow('BUTTON', // BUTTON creates an button, obviously
+  fHandle:=createWindow('BUTTON', // BUTTON creates an button, obviously
     'Show Message', // Name of window - also the text that will be in it
     WS_CHILD OR WS_VISIBLE OR BS_PUSHBUTTON OR BS_TEXT, // style flags
     8, 40, 96, 25, // Position and size
@@ -437,6 +446,11 @@ begin
     0, // Menu - none because it's a button
     SysInit.HInstance, // Application instance
     nil); // No creation data
+
+  if fHandle=0 then begin
+    LogError('libgui: não foi possível criar o botão');
+    Exit;
+  end;
 
   arrayOfComponents[fID-1]:=self;
   hWndIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
@@ -460,9 +474,9 @@ end;
 procedure deptocomApp.setMainWindow(mw:Window);
 begin
   if mainWindowHandle<>0 then
-    raise exception.create('Já há uma MainWindow definida. Não é possível redefiní-la.');
+    raise Exception.Create('Já há uma MainWindow definida. Não é possível redefiní-la.');
   if mw<>nil then begin
-    self.fMainWindow:=mw;
+    fMainWindow:=mw;
     mainWindowHandle:=mw.Handle;
   end;
 end;
@@ -481,8 +495,6 @@ begin
 end;
 
 initialization
-  if not isConsole then
-    writeln('redirecionamos a saída padrão para o arquivo debug.log');
   componentID:=0;
   windowNum:=0;
   hWndIdMap:=tstringlist.create;
