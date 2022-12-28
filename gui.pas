@@ -4,9 +4,8 @@ interface
 
 uses
   classes,
-  dialogs,
-  messages,
   graphics,
+  messages,
   windows;
 
 type
@@ -97,6 +96,7 @@ procedure showConsole;
 implementation
 
 uses
+  dwmapi,
   sysUtils;
 
 function GetConsoleWindow: HWND; stdcall; external kernel32;
@@ -125,7 +125,7 @@ var
 
 var
   arrayOfComponents:array of Component;
-  mapHandleID:tstringlist;
+  handleIdMap:tstringlist;
 
 constructor Component.create(parent:Container=nil);
 begin
@@ -231,7 +231,7 @@ end;
 
 function hWndToID(const hWnd:HWND):integer;
 begin
-  result:=strtoint(mapHandleID.Values[inttostr(hWND)]);
+  result:=strtoint(handleIdMap.Values[inttostr(hWND)]);
 end;
 
 function getComponent(const hWnd:HWND):Component;
@@ -271,6 +271,7 @@ constructor Window.create(parent:Window=nil);
 var
   styleFlags:cardinal;
   parentHandle:HWND;
+  flagArredondamentoCantosJanela:integer;
 begin
   inherited create(parent);
   inc(windowNum);
@@ -312,8 +313,12 @@ begin
     0, // no menu
     SysInit.hInstance, // application instance
     nil);
-    arrayOfComponents[fID-1]:=self;
-    mapHandleID.add(inttostr(fHandle)+'='+inttostr(fID));
+
+  arrayOfComponents[fID-1]:=self;
+  handleIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
+
+  flagArredondamentoCantosJanela:=DWMWCP_DONOTROUND;
+  DwmSetWindowAttribute(fHandle,DWMWA_WINDOW_CORNER_PREFERENCE,@flagArredondamentoCantosJanela,sizeOf(integer));
 end;
 
 procedure Window._WM_PAINT(var canvas:tcanvas);
@@ -357,7 +362,7 @@ begin
     nil); // No creation data
 
   arrayOfComponents[fID-1]:=self;
-  mapHandleID.add(inttostr(fHandle)+'='+inttostr(fID));
+  handleIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
 
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
@@ -393,7 +398,7 @@ begin
     nil); // No creation data
 
   arrayOfComponents[fID-1]:=self;
-  mapHandleID.add(inttostr(fHandle)+'='+inttostr(fID));
+  handleIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
 
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
@@ -439,7 +444,7 @@ initialization
     writeln('redirecionamos a saída padrão para o arquivo debug.log');
   componentID:=0;
   windowNum:=0;
-  mapHandleID:=tstringlist.create;
+  handleIdMap:=tstringlist.create;
   myApp:=deptocomApp.create;
 finalization
   componentID:=0;
