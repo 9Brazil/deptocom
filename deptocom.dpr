@@ -3,11 +3,10 @@ program deptocom;
 {$APPTYPE Console}
 
 uses
-  app in 'app.pas',
-  locale in 'locale.pas',
-  gui in 'gui.pas',
-  threads in 'threads.pas',
-  mwFastTime in 'mwFastTime.pas';
+  env in 'src\lib\env.pas',
+  gui in 'src\lib\gui.pas',
+  threads in 'src\lib\threads.pas',
+  mwFastTime in 'src\lib\mwFastTime.pas';
 
 var
   mainWindow:Window;
