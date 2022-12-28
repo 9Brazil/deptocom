@@ -141,12 +141,12 @@ end;
 
 function COMPUTERNAME:ansistring;
 var
-  computerName:array[0..256] of char;
+  compuname:array[0..256] of char;
   size:dword;
 begin
  size:=256;
- getComputerName(computerName,size);
- result:=computerName;
+ getComputerName(compuname,size);
+ result:=compuname;
 end;
 
 var

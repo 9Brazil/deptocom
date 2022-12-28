@@ -96,7 +96,7 @@ const
   {$EXTERNALSYM DWMWA_DISALLOW_PEEK}
   DWMWA_EXCLUDED_FROM_PEEK              = 12; // [set] LivePreview exclusion information
   {$EXTERNALSYM DWMWA_EXCLUDED_FROM_PEEK}
-  //+ [v. https://learn.microsoft.com/pt-br/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute]
+  //+ [v. https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute]
   DWMWA_CLOAK                           = 13;
   {$EXTERNALSYM DWMWA_CLOAK}
   DWMWA_CLOAKED                         = 14;

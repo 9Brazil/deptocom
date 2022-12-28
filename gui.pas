@@ -8,6 +8,12 @@ uses
   messages,
   windows;
 
+const
+  DEFAULT_WINDOW_X=40;
+  DEFAULT_WINDOW_Y=40;
+  DEFAULT_WINDOW_WIDTH=400;
+  DEFAULT_WINDOW_HEIGHT=200;
+
 type
   Container=class;
   Component=class(TInterfacedObject)
@@ -110,12 +116,6 @@ begin
   if isConsole then
     showWindow(GetConsoleWindow, SW_NORMAL);
 end;
-
-const
-  DEFAULT_WINDOW_X=40;
-  DEFAULT_WINDOW_Y=40;
-  DEFAULT_WINDOW_WIDTH=400;
-  DEFAULT_WINDOW_HEIGHT=200;
 
 var
   mainWindowHandle:HWND=0;
