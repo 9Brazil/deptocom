@@ -10,6 +10,8 @@ uses
   windows;
 
 const
+  DWMAPI = 'DWMAPI.DLL';
+
   DEFAULT_WINDOW_X=40;
   DEFAULT_WINDOW_Y=40;
   DEFAULT_WINDOW_WIDTH=400;
@@ -129,7 +131,8 @@ end;
 
 destructor Component.destroy;
 begin
-  if fHandle<>0 then destroyWindow(fHandle);
+  if (fHandle<>0) and (fHandle<>INVALID_HANDLE_VALUE) then
+    destroyWindow(fHandle);
   arrayOfComponents[fID-1]:=nil;
   fHandle:=0;
   fID:=0;
@@ -150,7 +153,7 @@ end;
 
 procedure Component.setVisible(isVisible:boolean);
 begin
-  if (fHandle<>0) and (isVisible<>fVisible) then begin
+  if (fHandle<>0) and (fHandle<>INVALID_HANDLE_VALUE) and (isVisible<>fVisible) then begin
     fVisible:=isVisible;
     if isVisible then
       showWindow(fHandle,SW_SHOWNORMAL)
@@ -169,7 +172,7 @@ end;
 
 procedure Component._setSize(const x,y,width,height:int32);
 begin
-  if (fHandle<>0) and ((x<>fLeft) or (y<>fTop) or (width<>fWidth) or (height<>fHeight)) then begin
+  if (fHandle<>0) and (fHandle<>INVALID_HANDLE_VALUE) and ((x<>fLeft) or (y<>fTop) or (width<>fWidth) or (height<>fHeight)) then begin
     fLeft:=x;
     fTop:=y;
     fWidth:=width;
@@ -212,7 +215,7 @@ end;
 
 procedure Container.setCaption(const newCaption:PAnsiChar);
 begin
-  if (fHandle<>0) and (newCaption<>self.fCaption) then
+  if (fHandle<>0) and (fHandle<>INVALID_HANDLE_VALUE) and (newCaption<>self.fCaption) then
   begin
     setWindowText(self.Handle,newCaption);
     fCaption:=newCaption;
@@ -358,7 +361,7 @@ begin
     SysInit.hInstance,  //application instance
     nil);
 
-  if fHandle=0 then begin
+  if (fHandle=0) or (fHandle=INVALID_HANDLE_VALUE) then begin
     LogError('libgui: não foi possível criar a janela');
     Exit;
   end;
@@ -406,7 +409,7 @@ begin
     SysInit.HInstance, // Application instance
     nil); // No creation data
 
-  if fHandle=0 then begin
+  if (fHandle=0) or (fHandle=INVALID_HANDLE_VALUE) then begin
     LogError('libgui: não foi possível criar o edit');
     Exit;
   end;
@@ -447,7 +450,7 @@ begin
     SysInit.HInstance, // Application instance
     nil); // No creation data
 
-  if fHandle=0 then begin
+  if (fHandle=0) or (fHandle=INVALID_HANDLE_VALUE) then begin
     LogError('libgui: não foi possível criar o botão');
     Exit;
   end;

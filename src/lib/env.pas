@@ -8,9 +8,10 @@ uses
   windows;
 
 const
-  DWMAPI = 'DWMAPI.DLL';
-
   DIRECTORY_SEPARATOR='\';
+  DRIVE_SEPARATOR=':';
+  LINE_ENDING=#13#10;
+  LINE_BREAK=LINE_ENDING;
 
   SOFTWARE_NAME='deptocom';
   SOFTWARE_REGISTRYKEY='Software'+DIRECTORY_SEPARATOR+SOFTWARE_NAME+DIRECTORY_SEPARATOR;
@@ -30,25 +31,43 @@ const
   RUNERR_NO_DATADIR=55;
   RUNERR_NO_LOGINTABLE=56;
 
+  //LOG-LEVEL FLAGS
+  LL_FTL='F';//FATAL
+  LL_ERR='E';//ERROR
+  LL_WRN='W';//WARNING
+  LL_INF='I';//INFO
+  LL_DBG='D';//DEBUG
+
+  //LOG START OF MESSAGE
+  LSTX='#';
+
 type
   float=single;
   int8=shortint;
   int16=smallint;
   int32=integer;
 
-  csid=(
-    csidDesktop=CSIDL_DESKTOP,
-    csidMyDocuments=CSIDL_PERSONAL,
-    csidFavorites=CSIDL_FAVORITES,
-    csidStartup=CSIDL_STARTUP,
-    csidStartMenu=CSIDL_STARTMENU,
-    csidFonts=CSIDL_FONTS,
-    csidAppData=CSIDL_APPDATA
+  SpecialDirID=(
+    sidDesktop=CSIDL_DESKTOP,
+    sidMyDocuments=CSIDL_PERSONAL,
+    sidFavorites=CSIDL_FAVORITES,
+    sidStartup=CSIDL_STARTUP,
+    sidStartMenu=CSIDL_STARTMENU,
+    sidFonts=CSIDL_FONTS,
+    sidAppData=CSIDL_APPDATA
   );
+
+  LogLevel=(llFatal=0,llError,llWarning,llInfo,llDebug);
 
   Edeptocom=class(Exception);
 
-function GetSpecialDir(const dirNum:csid):ansistring;
+const
+  LogLevelFlag:array[llFatal..llDebug] of char=(LL_FTL,LL_ERR,LL_WRN,LL_INF,LL_DBG);
+  LogLevelLabel:array[llFatal..llDebug] of string=('FATAL','ERROR','WARNING','INFO','DEBUG');
+
+function GetUnitName(const o:TObject):shortstring;
+
+function GetSpecialDir(const sid:SpecialDirID):ansistring;
 
 function QueryRegistryValue(const nome:ansistring; out valor:ansistring; const key:ansistring=SOFTWARE_REGISTRYKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 function SetRegistryValue(const nome, valor : ansistring; const key:ansistring=SOFTWARE_REGISTRYKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
@@ -67,18 +86,22 @@ function BINDIR:ansistring;
 function DATADIR:ansistring;
 function TMPDIR:ansistring;
 
-procedure LogDebug(const msg:ansistring; const flushmsg:boolean=false);
+function CURRENT_TIMESTAMP:ansistring;
+
+procedure LogFatal(const msg:ansistring; const errorCode:int32; const flushmsg:boolean=false);
 procedure LogError(const msg:ansistring; const flushmsg:boolean=false);overload;
 procedure LogError(const e:Exception; const flushmsg:boolean=false);overload;
-procedure LogFatal(const msg:ansistring; const errorCode:int32; const flushmsg:boolean=false);
-procedure LogInfo(const msg:ansistring; const flushmsg:boolean=false);
 procedure LogWarn(const msg:ansistring; const flushmsg:boolean=false);
+procedure LogInfo(const msg:ansistring; const flushmsg:boolean=false);
+procedure LogDebug(const msg:ansistring; const flushmsg:boolean=false);
+procedure Log(const level:LogLevel; const msg:ansistring; const flushmsg:boolean=false; errorCode:int32=0);
 
 implementation
 
 uses
   activex,
-  registry;
+  registry,
+  typinfo;
 
 var
   _LOGFILENAME,
@@ -96,7 +119,24 @@ var
   unitInitializationOK
     :boolean=false;
 
-function GetSpecialDir(const dirNum:csid):ansistring;
+function GetUnitName(const o:TObject):shortstring;
+var
+  tpdt:PTypeData;
+begin
+  result:='';
+  try
+    if (o<>nil) and (o.ClassInfo<>nil) then begin
+      tpdt:=GetTypeData(o.ClassInfo);
+      if tpdt<>nil then
+        result:=tpdt^.UnitName;
+    end;
+  except
+    // o<>nil
+    // mas não aponta para um objeto (aponta para uma área de memória inadequada)
+  end;
+end;
+
+function GetSpecialDir(const sid:SpecialDirID):ansistring;
 var
   alloc:imalloc;
   specialdir:pItemIdList;
@@ -104,7 +144,7 @@ var
 begin
   if SHGetMalloc(alloc)=NOERROR then
   begin
-    SHGetSpecialFolderLocation(0,integer(dirnum),specialdir);
+    SHGetSpecialFolderLocation(0,integer(sid),specialdir);
     SHGetPathFromIDList(specialdir,@buf[0]);
     alloc.Free(specialdir);
     result:=ansistring(buf);
@@ -257,46 +297,9 @@ begin
   result:=_TMPDIR;
 end;
 
-procedure LogDebug(const msg:ansistring; const flushmsg:boolean=false);
-var
-  line:ansistring;
+function CURRENT_TIMESTAMP:ansistring;
 begin
-  line:=
-    FormatDatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
-    +'['+OS_USER+']'
-    +'[DEBUG] '
-    +msg;
-  Writeln(logfile,line);
-  if flushmsg then
-    flush(logfile);
-end;
-
-procedure LogError(const msg:ansistring; const flushmsg:boolean=false);
-var
-  line:ansistring;
-begin
-  line:=
-    FormatDatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
-    +'['+OS_USER+']'
-    +'[ERROR] '
-    +msg;
-  Writeln(logfile,line);
-  if flushmsg then
-    flush(logfile);
-end;
-
-procedure LogError(const e:Exception; const flushmsg:boolean=false);
-var
-  line:ansistring;
-begin
-  line:=
-    FormatDatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
-    +'['+OS_USER+']'
-    +'[ERROR] '
-    +e.classname+': '+e.message;
-  Writeln(logfile,line);
-  if flushmsg then
-    flush(logfile);
+  result:=FormatDatetime('yyyymmddhhnnsszzz',now);
 end;
 
 procedure LogFatal(const msg:ansistring; const errorCode:int32; const flushmsg:boolean=false);
@@ -304,10 +307,11 @@ var
   line:ansistring;
 begin
   line:=
-    FormatDatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
-    +'['+OS_USER+']'
-    +'[FATAL]'
-    +'[runerror code: '+IntToStr(errorCode)+'] '
+    CURRENT_TIMESTAMP
+    +LL_FTL
+    +OS_USER
+    +LSTX
+    +'err:'+IntToStr(errorCode)+':'
     +msg;
   Writeln(logfile,line);
   if flushmsg then
@@ -315,18 +319,24 @@ begin
   Runerror(errorCode);
 end;
 
-procedure LogInfo(const msg:ansistring; const flushmsg:boolean=false);
+procedure LogError(const msg:ansistring; const flushmsg:boolean=false);
 var
   line:ansistring;
 begin
   line:=
-    FormatDatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
-    +'['+OS_USER+']'
-    +'[INFO] '
+    CURRENT_TIMESTAMP
+    +LL_ERR
+    +OS_USER
+    +LSTX
     +msg;
   Writeln(logfile,line);
   if flushmsg then
     flush(logfile);
+end;
+
+procedure LogError(const e:Exception; const flushmsg:boolean=false);
+begin
+  LogError(e.classname+': '+e.message);
 end;
 
 procedure LogWarn(const msg:ansistring; const flushmsg:boolean=false);
@@ -334,13 +344,56 @@ var
   line:ansistring;
 begin
   line:=
-    FormatDatetime('[dd/mm/yyyy hh:nn:ss.zzz]',now)
-    +'['+OS_USER+']'
-    +'[WARN] '
+    CURRENT_TIMESTAMP
+    +LL_WRN
+    +OS_USER
+    +LSTX
     +msg;
   Writeln(logfile,line);
   if flushmsg then
     flush(logfile);
+end;
+
+procedure LogInfo(const msg:ansistring; const flushmsg:boolean=false);
+var
+  line:ansistring;
+begin
+  line:=
+    CURRENT_TIMESTAMP
+    +LL_INF
+    +OS_USER
+    +LSTX
+    +msg;
+  Writeln(logfile,line);
+  if flushmsg then
+    flush(logfile);
+end;
+
+procedure LogDebug(const msg:ansistring; const flushmsg:boolean=false);
+var
+  line:ansistring;
+begin
+  line:=
+    CURRENT_TIMESTAMP
+    +LL_DBG
+    +OS_USER
+    +LSTX
+    +msg;
+  Writeln(logfile,line);
+  if flushmsg then
+    flush(logfile);
+end;
+
+procedure Log(const level:LogLevel; const msg:ansistring; const flushmsg:boolean=false; errorCode:int32=0);
+begin
+  case level of
+    llFatal:logFatal(msg,errorCode,flushmsg);
+    llError:logError(msg,flushmsg);
+    llWarning:logWarn(msg,flushmsg);
+    llInfo:logInfo(msg,flushmsg);
+    llDebug:logDebug(msg,flushmsg);
+    else raise Edeptocom.Create('env.Log: level de log desconhecido: '+intToStr(byte(level)));
+  end;
 end;
 
 var
@@ -430,7 +483,7 @@ initialization
   folderOK:=false;
   try
     if not QueryRegistryValue('tmpdir',_TMPDIR) then
-      raise Edeptocom.Create('falha em recuperar o diretório de arquivos temporários do registro do Windows')
+      raise Edeptocom.Create('falha em consultar o diretório de arquivos temporários no registro do Windows')
     else
       errcode:=0;
   except
@@ -442,11 +495,11 @@ initialization
 
   try
     if not folderOK then begin
-      straux:=GetSpecialDir(csidAppData);
+      straux:=GetSpecialDir(sidAppData);
       //APENAS POR COMPLETUDE! NÃO OCORRE!
       if not DirectoryExists(straux) then begin
         LogWarn(SOFTWARE_NAME+': env: initialization: o diretório '+straux+' não existe',true);
-        straux:=GetSpecialDir(csidMyDocuments);
+        straux:=GetSpecialDir(sidMyDocuments);
         //TAMBÉM APENAS POR COMPLETUDE! NÃO OCORRE!
         if not DirectoryExists(straux) then
           LogWarn(SOFTWARE_NAME+': env: initialization: o diretório '+straux+' não existe',true);
@@ -493,6 +546,7 @@ initialization
 
   straux:='';
   errcode:=0;
+  folderOK:=false;
   unitInitializationOK:=true;
 finalization
   if logfileOK then
