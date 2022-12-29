@@ -46,7 +46,7 @@ type
     csidAppData=CSIDL_APPDATA
   );
 
-  Edeptocom=Exception;
+  Edeptocom=class(Exception);
 
 function GetSpecialDir(const dirNum:csid):ansistring;
 
@@ -130,16 +130,17 @@ function QueryRegistryValue(const nome:ansistring; out valor:ansistring; const k
 var
   reg:TRegistry;
 begin
+  result:=false;
   try
     reg:=TRegistry.Create(KEY_QUERY_VALUE);
     try
       reg.rootkey:=rootkey;
-      result:=reg.OpenKey(key,false);
-      if not result then Exit;
+      if not reg.OpenKey(key,false) then Exit;
       try
-        result:=reg.ValueExists(nome);
-        if result then
+        if reg.ValueExists(nome) then begin
           valor:=reg.ReadString(nome);
+          result:=true;
+        end;
       finally
         reg.CloseKey;
       end;
@@ -147,7 +148,6 @@ begin
       reg.Free;
     end;
   except on e:Exception do begin
-      result:=false;
       if unitInitializationOK then
         LogError(e)
       else
@@ -162,12 +162,12 @@ function SetRegistryValue(const nome, valor : ansistring; const key:ansistring=S
 var
   reg:TRegistry;
 begin
+  result:=false;
   try
     reg:=TRegistry.Create(KEY_SET_VALUE);
     try
       reg.rootkey:=rootkey;
-      result:=reg.OpenKey(key,false);
-      if not result then Exit;
+      if not reg.OpenKey(key,false) then Exit;
       reg.WriteString(nome,valor);
       reg.CloseKey;
       result:=true;
@@ -175,7 +175,6 @@ begin
       reg.Free;
     end;
   except on e:Exception do begin
-      result:=false;
       if unitInitializationOK then
         LogError(e)
       else
@@ -363,12 +362,29 @@ initialization
   try
     CreateSoftwareRegistryKey;
     errcode:=RUNERR_NO_LOGFILE;
-    QueryRegistryValue('logfile',_LOGFILENAME);
+    try
+      if isConsole and consoleVisible and (not QueryRegistryValue('logfile',_LOGFILENAME)) then
+        Writeln(SOFTWARE_NAME+': env: initialization: nao conseguimos consultar o valor de logfile no registro do Windows');
+    except
+      on e:Exception do begin
+        if isConsole and consoleVisible then
+          Writeln(SOFTWARE_NAME+': env: initialization: nao conseguimos consultar o valor de logfile no registro do Windows: '
+            +e.Classname+': '+e.message);
+      end;
+    end;
     _LOGFILENAME:=Trim(_LOGFILENAME);
     if _LOGFILENAME='' then begin
       _LOGFILENAME:=GetCurrentDir+DIRECTORY_SEPARATOR+LOG_FILE;
-      if (not SetRegistryValue('logfile',_LOGFILENAME)) and isConsole and consoleVisible then
-        Writeln(SOFTWARE_NAME+': env: initialization: não conseguimos registrar logfile='+_LOGFILENAME+' no registro do Windows');
+      try
+        if (not SetRegistryValue('logfile',_LOGFILENAME)) and isConsole and consoleVisible then
+          Writeln(SOFTWARE_NAME+': env: initialization: nao conseguimos registrar logfile='+_LOGFILENAME+' no registro do Windows');
+      except
+        on e:Exception do begin
+          if isConsole and consoleVisible then
+            Writeln(SOFTWARE_NAME+': env: initialization: nao conseguimos registrar logfile='
+              +_LOGFILENAME+' no registro do Windows: '+e.Classname+': '+e.message);
+        end;
+      end;
     end;
     AssignFile(logfile,_LOGFILENAME);
     if FileExists(_LOGFILENAME) then
@@ -382,7 +398,7 @@ initialization
   except
     on e:Exception do begin
       if isConsole and consoleVisible then
-        Writeln(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message);
+        Writeln(SOFTWARE_NAME+': env: initialization: nao conseguimos criar um arquivo de log para a aplicacao: '+e.Classname+': '+e.message);
       Runerror(errcode);
     end;
   end;
@@ -465,7 +481,7 @@ initialization
     folderOK:=true;
   except
     on e:Exception do begin
-      LogFatal(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message+': Não foi possível criar um diretório para arquivos temporários.',
+      LogFatal(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message+': não foi possível criar um diretório para arquivos temporários',
       RUNERR_NO_TMPDIR,true); //sem um diretório para arquivos temporários
                               //não podemos iniciar o programa
     end;

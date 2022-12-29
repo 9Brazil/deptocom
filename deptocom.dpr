@@ -1,5 +1,7 @@
 program deptocom;
 
+{$APPTYPE Console}
+
 uses
   env in 'src\lib\env.pas',
   gui in 'src\lib\gui.pas',
