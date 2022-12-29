@@ -485,8 +485,8 @@ procedure deptocomApp.run;
 var
   msg:tmsg;
 begin
-  if self.fMainWindow<>nil then begin
-    self.fMainWindow.Visible:=true;
+  if fMainWindow<>nil then begin
+    fMainWindow.Visible:=true;
     while getMessage(msg,0,0,0)<>BOOL(FALSE) do begin
       translateMessage(msg);
       dispatchMessage(msg);
