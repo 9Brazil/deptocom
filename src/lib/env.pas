@@ -15,6 +15,7 @@ const
 
   SOFTWARE_NAME='deptocom';
   SOFTWARE_REGISTRYKEY='Software'+DIRECTORY_SEPARATOR+SOFTWARE_NAME+DIRECTORY_SEPARATOR;
+  STDOUTPUT_FILE='stdout.txt';//default (tentamos redirecionar a saída padrão para esse arquivo)  
   LOG_SUFFIX='.log';//default
   LOG_FILE=SOFTWARE_NAME+LOG_SUFFIX;//default
   BINARIES_FOLDER_NAME='bin';//default
@@ -81,11 +82,12 @@ function SCREEN_SIZE:TSize;
 function OS_USER:ansistring;
 function COMPUTERNAME:ansistring;
 function LOGFILENAME:ansistring;
+function LOGDIR:ansistring;
 function DEPTOCOMDIR:ansistring;
 function BINDIR:ansistring;
 function DATADIR:ansistring;
 function TMPDIR:ansistring;
-
+function STDOUTPUTFILE:ansistring;
 function CURRENT_TIMESTAMP:ansistring;
 
 procedure LogFatal(const msg:ansistring; const errorCode:int32; const flushmsg:boolean=false);
@@ -101,6 +103,7 @@ implementation
 uses
   activex,
   registry,
+  threads,
   typinfo;
 
 var
@@ -110,11 +113,15 @@ var
   _DATADIR,
   _TMPDIR
     :ansistring;
+  stdoutFile
+    :string='';
   logfile
     :textfile;
   logfileOK
     :boolean=false;
   consoleVisible
+    :boolean=false;
+  StdOutputFileOK
     :boolean=false;
   unitInitializationOK
     :boolean=false;
@@ -134,6 +141,13 @@ begin
     // o<>nil
     // mas não aponta para um objeto (aponta para uma área de memória inadequada)
   end;
+end;
+
+function GetUnitName2(const o:TObject):shortstring;
+begin
+  result:=GetUnitName(o);
+  if result<>'' then
+    result:=result+'.';
 end;
 
 function GetSpecialDir(const sid:SpecialDirID):ansistring;
@@ -267,14 +281,22 @@ var
   compuname:array[0..256] of char;
   size:dword;
 begin
- size:=256;
- GetComputerName(compuname,size);
- result:=compuname;
+  size:=256;
+  GetComputerName(compuname,size);
+  result:=compuname;
 end;
 
 function LOGFILENAME:ansistring;
 begin
   result:=_LOGFILENAME;
+end;
+
+function LOGDIR:ansistring;
+begin
+  if _LOGFILENAME='' then
+    result:=''
+  else
+    result:=ExtractFileDir(_LOGFILENAME);
 end;
 
 function DEPTOCOMDIR:ansistring;
@@ -295,6 +317,13 @@ end;
 function TMPDIR:ansistring;
 begin
   result:=_TMPDIR;
+end;
+
+function STDOUTPUTFILE:ansistring;
+begin
+  result:='';
+  if (not isConsole) and StdOutputFileOK then
+    result:=stdoutFile;
 end;
 
 function CURRENT_TIMESTAMP:ansistring;
@@ -336,7 +365,7 @@ end;
 
 procedure LogError(const e:Exception; const flushmsg:boolean=false);
 begin
-  LogError(e.classname+': '+e.message);
+  LogError(GetUnitName2(e)+e.classname+': '+e.message);
 end;
 
 procedure LogWarn(const msg:ansistring; const flushmsg:boolean=false);
@@ -392,8 +421,43 @@ begin
     llWarning:logWarn(msg,flushmsg);
     llInfo:logInfo(msg,flushmsg);
     llDebug:logDebug(msg,flushmsg);
-    else raise Edeptocom.Create('env.Log: level de log desconhecido: '+intToStr(byte(level)));
+    else raise Edeptocom.Create('env.Log: level de log desconhecido: '+intToStr(ord(level)));
   end;
+end;
+
+procedure SetStdOutputFile;
+var
+  stdof:string;
+begin
+  if not isConsole then begin
+    try if not QueryRegistryValue('stdoutputfile',stdof) then                           //podemos configurar um arquivo
+    raise edeptocom.Create('Falha na consulta [stdoutputfile] ao registro do Windows'); //de nosso gosto no registro do Windows;
+    except stdof:=''; end;                                                              //se algo der errado, tentamos um nome de
+    if Trim(stdof)='' then stdof:=GetCurrentDir+DIRECTORY_SEPARATOR+STDOUTPUT_FILE;     //arquivo previamente definido (STDOUTPUT_FILE)
+    AssignFile(System.Output,stdof);
+    if FileExists(stdof) then
+      Append(System.Output)
+    else
+      Rewrite(System.Output);
+    write;//dummy test
+    StdOutputFileOK:=true;
+    stdoutFile:=stdof;
+    SetRegistryValue('stdoutputfile',stdoutFile);
+  end;
+end;
+
+procedure CloseStdOutputFile;
+begin
+  if (not isConsole) and StdOutputFileOK then
+    CloseFile(System.Output);
+  stdoutFile:='';
+  StdOutputFileOK:=false;
+end;
+
+procedure OutputWriteLn(const arg:string);
+begin
+  if (isConsole and consoleVisible) or ((not isConsole) and StdOutputFileOK) then
+    writeLn(arg);
 end;
 
 var
@@ -406,6 +470,8 @@ var
 
 initialization
   consoleVisible:=isConsole;
+  runAsync(SetStdOutputFile);
+//  while not StdOutputFileOK do;
 
   //verifica o diretório (chave) do software no registro do Windows
   //e o arquivo de log da aplicação
@@ -416,27 +482,22 @@ initialization
     CreateSoftwareRegistryKey;
     errcode:=RUNERR_NO_LOGFILE;
     try
-      if isConsole and consoleVisible and (not QueryRegistryValue('logfile',_LOGFILENAME)) then
-        Writeln(SOFTWARE_NAME+': env: initialization: nao conseguimos consultar o valor de logfile no registro do Windows');
+      if not QueryRegistryValue('logfile',_LOGFILENAME) then
+        OutputWriteLn(SOFTWARE_NAME+': env: initialization: nao conseguimos consultar o valor de logfile no registro do Windows');
     except
-      on e:Exception do begin
-        if isConsole and consoleVisible then
-          Writeln(SOFTWARE_NAME+': env: initialization: nao conseguimos consultar o valor de logfile no registro do Windows: '
-            +e.Classname+': '+e.message);
-      end;
+      on e:Exception do OutputWriteLn(SOFTWARE_NAME+
+        ': env: initialization: nao conseguimos consultar o valor de logfile no registro do Windows: '+
+        e.Classname+': '+e.message);
     end;
     _LOGFILENAME:=Trim(_LOGFILENAME);
     if _LOGFILENAME='' then begin
       _LOGFILENAME:=GetCurrentDir+DIRECTORY_SEPARATOR+LOG_FILE;
       try
-        if (not SetRegistryValue('logfile',_LOGFILENAME)) and isConsole and consoleVisible then
-          Writeln(SOFTWARE_NAME+': env: initialization: nao conseguimos registrar logfile='+_LOGFILENAME+' no registro do Windows');
+        if not SetRegistryValue('logfile',_LOGFILENAME) then
+          OutputWriteLn(SOFTWARE_NAME+': env: initialization: nao conseguimos registrar logfile='+_LOGFILENAME+' no registro do Windows');
       except
-        on e:Exception do begin
-          if isConsole and consoleVisible then
-            Writeln(SOFTWARE_NAME+': env: initialization: nao conseguimos registrar logfile='
-              +_LOGFILENAME+' no registro do Windows: '+e.Classname+': '+e.message);
-        end;
+        on e:Exception do OutputWriteLn(SOFTWARE_NAME+': env: initialization: nao conseguimos registrar logfile='
+          +_LOGFILENAME+' no registro do Windows: '+e.Classname+': '+e.message);
       end;
     end;
     AssignFile(logfile,_LOGFILENAME);
@@ -444,14 +505,13 @@ initialization
       Append(logfile)
     else
       Rewrite(logfile);
-    LogInfo('Arquivo de log OK.',true);
+    write(logfile);//dummy test
     logfileOK:=true;
     errcode:=0;
-    //ARQUIVO DE LOG OK: aberto para uso!
+    //ARQUIVO DE LOG OK!
   except
     on e:Exception do begin
-      if isConsole and consoleVisible then
-        Writeln(SOFTWARE_NAME+': env: initialization: nao conseguimos criar um arquivo de log para a aplicacao: '+e.Classname+': '+e.message);
+      OutputWriteLn(SOFTWARE_NAME+': env: initialization: nao conseguimos criar um arquivo de log para a aplicacao: '+e.Classname+': '+e.message);
       Runerror(errcode);
     end;
   end;
@@ -483,16 +543,14 @@ initialization
   folderOK:=false;
   try
     if not QueryRegistryValue('tmpdir',_TMPDIR) then
-      raise Edeptocom.Create('falha em consultar o diretório de arquivos temporários no registro do Windows')
+      raise Edeptocom.Create('falha em consultar o diretório de arquivos temporários [tmpdir] no registro do Windows')
     else
       errcode:=0;
   except
     on e:Exception do
       LogWarn(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message,true);
   end;
-
   folderOK:=not(errcode=RUNERR_NO_TMPDIR);
-
   try
     if not folderOK then begin
       straux:=GetSpecialDir(sidAppData);
@@ -504,7 +562,6 @@ initialization
         if not DirectoryExists(straux) then
           LogWarn(SOFTWARE_NAME+': env: initialization: o diretório '+straux+' não existe',true);
       end;
-
       _TMPDIR:=straux+DIRECTORY_SEPARATOR+SOFTWARE_NAME;
       if not DirectoryExists(_TMPDIR) then
         if not ForceDirectories(_TMPDIR) then begin
@@ -515,11 +572,11 @@ initialization
         end;
       //else TEMOS O NOSSO DIRETÓRIO DE ARQUIVOS TEMPORÁRIOS!
 
-      //tentamos registrar o diretório temporário no registro do Windows,
+      //tentamos registrar o diretório de arquivos temporários no registro do Windows,
       //na chave do software
       try
         if not SetRegistryValue('tmpdir',_TMPDIR) then
-          raise Edeptocom.Create('não foi possível registrar o diretório de arquivos temporários no registro do Windows');
+          raise Edeptocom.Create('não foi possível registrar o diretório de arquivos temporários [tmpdir] no registro do Windows');
       except
         on e:Exception do
           LogWarn(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message,true);
@@ -551,4 +608,5 @@ initialization
 finalization
   if logfileOK then
     CloseFile(logfile);
+  CloseStdOutputFile;
 end.

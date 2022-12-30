@@ -22,9 +22,9 @@ type
     destructor destroy;override;
   end;
 
-procedure assync(proc:tprocedure);overload;
-procedure assync(proc:tobjproc);overload;
-procedure sync(proc:tobjproc);
+procedure runAsync(proc:tprocedure);overload;
+procedure runAsync(proc:tobjproc);overload;
+procedure runSync(proc:tobjproc);
 
 implementation
 
@@ -57,17 +57,17 @@ begin
   inherited destroy;
 end;
 
-procedure assync(proc:tprocedure);
+procedure runAsync(proc:tprocedure);
 begin
   (tprocthread.create(proc)).resume;
 end;
 
-procedure assync(proc:tobjproc);
+procedure runAsync(proc:tobjproc);
 begin
   (tprocthread.create(proc)).resume;
 end;
 
-procedure sync(proc:tobjproc);
+procedure runSync(proc:tobjproc);
 begin
   (tprocthread.create(proc,true)).resume;
 end;
