@@ -90,11 +90,11 @@ MaxStackSize=1048576
 ImageBase=4194304
 ExeDescription=
 [Directories]
-OutputDir=C:\Users\leonardo\Documents\GitHub\deptocom\bin
-UnitOutputDir=
-PackageDLLOutputDir=
-PackageDCPOutputDir=
-SearchPath=
+OutputDir=C:\deptocom\bin
+UnitOutputDir=C:\Users\leonardo\Documents\GitHub\deptocom\output
+PackageDLLOutputDir=C:\Users\leonardo\Documents\GitHub\deptocom\output
+PackageDCPOutputDir=C:\Users\leonardo\Documents\GitHub\deptocom\output
+SearchPath=C:\Users\leonardo\Documents\GitHub\deptocom\3;C:\Users\leonardo\Documents\GitHub\deptocom\3\Martin Waldenburg
 Packages=vcl;rtl;vclx;indy;inet;xmlrtl;vclie;inetdbbde;inetdbxpress;dbrtl;dsnap;dsnapcon;vcldb;soaprtl;VclSmp;dbexpress;dbxcds;inetdb;bdertl;vcldbx;webdsnap;websnap;adortl;ibxpress;teeui;teedb;tee;dss;visualclx;visualdbclx;vclactnband;vclshlctrls;IntrawebDB_50_70;Intraweb_50_70;Rave50CLX;Rave50VCL;dclOfficeXP
 Conditionals=
 DebugSourceDirs=
@@ -138,9 +138,21 @@ Comments=
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
-Count=2
-Item0=C:\Users\leonardo\Documents\GitHub\deptocom\3
-Item1=C:\Users\leonardo\Documents\GitHub\deptocom\src
-[HistoryLists\hlOutputDirectorry]
+Count=4
+Item0=C:\Users\leonardo\Documents\GitHub\deptocom\3;C:\Users\leonardo\Documents\GitHub\deptocom\3\Martin Waldenburg
+Item1=C:\Users\leonardo\Documents\GitHub\deptocom\3;C:\Users\leonardo\Documents\GitHub\deptocom\3\Martin Waldenburg;C:\Users\leonardo\Documents\GitHub\deptocom\3\Synopse;C:\Users\leonardo\Documents\GitHub\deptocom\3\Synopse\LVCL
+Item2=C:\Users\leonardo\Documents\GitHub\deptocom\3
+Item3=C:\Users\leonardo\Documents\GitHub\deptocom\src
+[HistoryLists\hlUnitOutputDirectory]
 Count=1
-Item0=C:\Users\leonardo\Documents\GitHub\deptocom\bin
+Item0=C:\Users\leonardo\Documents\GitHub\deptocom\output
+[HistoryLists\hlOutputDirectorry]
+Count=2
+Item0=C:\deptocom\bin
+Item1=C:\Users\leonardo\Documents\GitHub\deptocom\bin
+[HistoryLists\hlBPLOutput]
+Count=1
+Item0=C:\Users\leonardo\Documents\GitHub\deptocom\output
+[HistoryLists\hlDCPOutput]
+Count=1
+Item0=C:\Users\leonardo\Documents\GitHub\deptocom\output

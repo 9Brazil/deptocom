@@ -58,30 +58,73 @@ type
     sidAppData=CSIDL_APPDATA
   );
 
-  WindowsVersion = (
-    wv95,
-    wv98,
-    wvNT4,
-    wvME,
-    wv2000,
-    wvXP,
-    wvSERVER2003,
-    wvVISTA,
-    wv7,
-    wv8,
-    wv8_1,
-    wv10,
-    wv11
+  WinVersionInfo=record
+    wVersion,
+    wMajorVersion,
+    wMinorVersion,
+    wBuild
+      :DWORD;
+  end;
+
+  WindowsEdition = (
+    w3_11=3,
+    w95,
+    w98,
+    wNT4,
+    wME,
+    w2000,
+    wXP,
+    wXP64,
+    wSERVER2003,
+    wSERVER2003R2,
+    wVISTA,
+    wSERVER2008,
+    wSERVER2008R2,
+    w7,
+    wSERVER2012,
+    w8,
+    wSERVER2012R2,
+    w8_1,
+    wSERVER2016,
+    wSERVER2019,
+    wSERVER2022,
+    w10,
+    w11
   );
 
-  LogLevel=(llFatal=0,llError,llWarning,llInfo,llDebug);
+  LogLevel = (llFatal=0,llError,llWarning,llInfo,llDebug);
 
-  Edeptocom=class(Exception);
+  Edeptocom = class(Exception);
 
 const
-  WindowsVersionName:array[wv95..wv11] of string=('Windows 95','Windows 98','Windows NT 4.0','Windows Millennium','Windows 2000','Windows XP','Windows Server 2003/Windows XP x64','Windows Vista','Windows 7','Windows 8','Windows 8.1','Windows 10','Windows 11');
-  LogLevelFlag:array[llFatal..llDebug] of char=(LL_FTL,LL_ERR,LL_WRN,LL_INF,LL_DBG);
-  LogLevelLabel:array[llFatal..llDebug] of string=('FATAL','ERROR','WARNING','INFO','DEBUG');
+  //v. https://learn.microsoft.com/en-us/windows/win32/sysinfo/operating-system-version
+  WindowsEditionName:array[w3_11..w11] of string = (
+    'Windows 3.11',
+    'Windows 95',
+    'Windows 98',
+    'Windows NT 4.0',
+    'Windows Millennium',
+    'Windows 2000',
+    'Windows XP',
+    'Windows XP x64',
+    'Windows Server 2003',
+    'Windows Server 2003 R2',
+    'Windows Vista',
+    'Windows Server 2008',
+    'Windows Server 2008 R2',
+    'Windows 7',
+    'Windows Server 2012',
+    'Windows 8',
+    'Windows Server 2012 R2',
+    'Windows 8.1',
+    'Windows Server 2016',
+    'Windows Server 2019',
+    'Windows Server 2022',
+    'Windows 10',
+    'Windows 11'
+  );
+  LogLevelFlag:array[llFatal..llDebug] of char = (LL_FTL,LL_ERR,LL_WRN,LL_INF,LL_DBG);
+  LogLevelLabel:array[llFatal..llDebug] of string = ('FATAL','ERROR','WARNING','INFO','DEBUG');
 
 function GetUnitName(const o:TObject):shortstring;
 
@@ -90,10 +133,17 @@ function GetSpecialDir(const sid:SpecialDirID):ansistring;
 function QueryRegistryValue(const nome:ansistring; out valor:ansistring; const key:ansistring=SOFTWARE_REGISTRYKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 function SetRegistryValue(const nome, valor : ansistring; const key:ansistring=SOFTWARE_REGISTRYKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 
+function PID:cardinal;
+
 function GetConsoleWindow:HWND; stdcall; external kernel32;
 procedure HideConsole;
 procedure ShowConsole;
 function ConsoleIsVisible:boolean;
+
+function WIN_VERSION_INFO:WinVersionInfo;
+function WINDOWS_VERSION:string;
+function WinEdition(wid:WindowsEdition):string;overload;
+function WinEdition(wv:WinVersionInfo):string;overload;
 
 function SCREEN_SIZE:TSize;
 function OS_USER:ansistring;
@@ -256,6 +306,11 @@ begin
   end;
 end;
 
+function PID:cardinal;
+begin
+  result:=GetCurrentProcessId;
+end;
+
 procedure HideConsole;
 begin
   if isConsole and consoleVisible then begin
@@ -275,6 +330,43 @@ end;
 function ConsoleIsVisible:boolean;
 begin
   result:=consoleVisible;
+end;
+
+//v. https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getversion
+//Depende do modo de compatibilidade (i.e., do manifesto) em que o software é executado!
+function WIN_VERSION_INFO:WinVersionInfo;
+var
+  wv:DWORD;
+begin
+  wv:=GetVersion;
+  result.wVersion:=wv;
+  result.wMajorVersion:=DWORD(LOBYTE(LOWORD(wv)));
+  result.wMinorVersion:=DWORD(HIBYTE(LOWORD(wv)));
+  if wv<$80000000 then
+    result.wBuild:=DWORD(HIWORD(wv));
+end;
+
+function WINDOWS_VERSION:string;
+var
+  wv:WinVersionInfo;
+begin
+  wv:=WIN_VERSION_INFO;
+  with wv do begin
+    result:='Microsoft Windows versão '+intToStr(wMajorVersion)+'.'+intToStr(wMinorVersion)+'.'+intToStr(wBuild);
+  end;
+end;
+
+function WinEdition(wid:WindowsEdition):string;
+begin
+  if (wid<low(WindowsEdition)) or (wid>high(WindowsEdition)) then
+    result:=''
+  else
+    result:=WindowsEditionName[wid];
+end;
+
+function WinEdition(wv:WinVersionInfo):string;
+begin
+  //
 end;
 
 function SCREEN_SIZE:TSize;
