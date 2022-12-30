@@ -134,3 +134,13 @@ OriginalFilename=
 ProductName=
 ProductVersion=1.0.0.0
 Comments=
+[HistoryLists\hlUnitAliases]
+Count=1
+Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
+[HistoryLists\hlSearchPath]
+Count=2
+Item0=C:\Users\leonardo\Documents\GitHub\deptocom\3
+Item1=C:\Users\leonardo\Documents\GitHub\deptocom\src
+[HistoryLists\hlOutputDirectorry]
+Count=1
+Item0=C:\Users\leonardo\Documents\GitHub\deptocom\bin

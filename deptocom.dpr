@@ -1,6 +1,6 @@
 program deptocom;
 
-{$APPTYPE Console}
+//{$APPTYPE Console}
 
 uses
   env in 'src\lib\env.pas',

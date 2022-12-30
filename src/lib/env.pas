@@ -48,7 +48,7 @@ type
   int16=smallint;
   int32=integer;
 
-  SpecialDirID=(
+  SpecialDirID = (
     sidDesktop=CSIDL_DESKTOP,
     sidMyDocuments=CSIDL_PERSONAL,
     sidFavorites=CSIDL_FAVORITES,
@@ -58,11 +58,28 @@ type
     sidAppData=CSIDL_APPDATA
   );
 
+  WindowsVersion = (
+    wv95,
+    wv98,
+    wvNT4,
+    wvME,
+    wv2000,
+    wvXP,
+    wvSERVER2003,
+    wvVISTA,
+    wv7,
+    wv8,
+    wv8_1,
+    wv10,
+    wv11
+  );
+
   LogLevel=(llFatal=0,llError,llWarning,llInfo,llDebug);
 
   Edeptocom=class(Exception);
 
 const
+  WindowsVersionName:array[wv95..wv11] of string=('Windows 95','Windows 98','Windows NT 4.0','Windows Millennium','Windows 2000','Windows XP','Windows Server 2003/Windows XP x64','Windows Vista','Windows 7','Windows 8','Windows 8.1','Windows 10','Windows 11');
   LogLevelFlag:array[llFatal..llDebug] of char=(LL_FTL,LL_ERR,LL_WRN,LL_INF,LL_DBG);
   LogLevelLabel:array[llFatal..llDebug] of string=('FATAL','ERROR','WARNING','INFO','DEBUG');
 
@@ -471,7 +488,9 @@ var
 initialization
   consoleVisible:=isConsole;
   runAsync(SetStdOutputFile);
-//  while not StdOutputFileOK do;
+//  while not StdOutputFileOK do; //descomente se você quiser que o fluxo aguarde
+                                  //a saída padrão StdOutput (System.Output) ser redirecionada
+                                  //isto é, reconfigurada (no caso de não estarmos rodando em modo Console, {APPTYPE Console})
 
   //verifica o diretório (chave) do software no registro do Windows
   //e o arquivo de log da aplicação
@@ -529,7 +548,7 @@ initialization
     if not SetRegistryValue('bindir',_BINDIR) then
       raise Edeptocom.Create('não foi possível registrar o diretório de arquivos binários (executáveis, bibliotecas) [bindir] no registro do Windows');
     if not SetRegistryValue('deptocomdir',_DEPTOCOMDIR) then
-      raise Edeptocom.Create('não foi possível registrar o diretório do software no registro do Windows');
+      raise Edeptocom.Create('não foi possível registrar o diretório do software [deptocomdir] no registro do Windows');
   except
     on e:Exception do
       LogWarn(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message,true);
