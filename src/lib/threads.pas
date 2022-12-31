@@ -8,68 +8,78 @@ uses
   Windows;
 
 type
-  tobjproc=procedure of object;
-  tprocthread=class(tthread)
+  TObjProc=procedure of object;
+  TProcThread=class(TThread)
   private
-    fproc:tprocedure;
-    fobjproc:tobjproc;
-    fisobjproc,fsync:boolean;
+    fProc
+      :TProcedure;
+    fObjProc
+      :TObjProc;
+    fIsObjProc,
+    fSync
+      :boolean;
   protected
-    procedure execute; override;
+    procedure Execute; override;
   public
-    constructor create(proc:tprocedure);overload;
-    constructor create(proc:tobjproc; const sync:boolean=false);overload;
-    destructor destroy;override;
+    constructor Create(proc:TProcedure);overload;
+    constructor Create(proc:TObjProc; const sync:boolean=FALSE);overload;
+    destructor Destroy;override;
   end;
 
-procedure runAsync(proc:tprocedure);overload;
-procedure runAsync(proc:tobjproc);overload;
-procedure runSync(proc:tobjproc);
+procedure RunAsync(proc:TProcedure);overload;
+procedure RunAsync(proc:TObjProc);overload;
+procedure RunSync(proc:TObjProc);
 
 implementation
 
-constructor tprocthread.create(proc:tprocedure);
+constructor TProcThread.Create(proc:TProcedure);
 begin
-  inherited create(true);
-  fisobjproc:=false;
-  fproc:=proc;
-  freeonterminate:=true;
+  inherited Create(TRUE);
+  fIsObjProc:=FALSE;
+  fProc:=proc;
+  FreeOnTerminate:=TRUE;
 end;
 
-constructor tprocthread.create(proc:tobjproc; const sync:boolean=false);
+constructor TProcThread.Create(proc:TObjProc; const sync:boolean=FALSE);
 begin
-  inherited create(true);
-  fisobjproc:=true;
-  fobjproc:=proc;
-  fsync:=sync;
-  freeonterminate:=true;
+  inherited Create(TRUE);
+  fIsObjProc:=TRUE;
+  fObjProc:=proc;
+  fSync:=sync;
+  FreeOnTerminate:=TRUE;
 end;
 
-procedure tprocthread.execute;
+procedure TProcThread.Execute;
 begin
-  if not fisobjproc then fproc else if fsync then synchronize(fobjproc) else fobjproc;
+  if not fIsObjProc then
+    fProc
+  else
+  if fSync then
+    Synchronize(fObjProc)
+  else
+    fObjProc;
 end;
 
-destructor tprocthread.destroy;
+destructor TProcThread.Destroy;
 begin
-  fproc:=nil;
-  fobjproc:=nil;
-  inherited destroy;
+  fProc:=NIL;
+  fObjProc:=NIL;
+  inherited Destroy;
 end;
 
-procedure runAsync(proc:tprocedure);
+procedure RunAsync(proc:TProcedure);
 begin
-  (tprocthread.create(proc)).resume;
+  (TProcThread.Create(proc)).Resume;
 end;
 
-procedure runAsync(proc:tobjproc);
+procedure RunAsync(proc:TObjProc);
 begin
-  (tprocthread.create(proc)).resume;
+  (TProcThread.Create(proc)).Resume;
 end;
 
-procedure runSync(proc:tobjproc);
+procedure RunSync(proc:TObjProc);
 begin
-  (tprocthread.create(proc,true)).resume;
+  (TProcThread.Create(proc,TRUE)).Resume;
 end;
 
 end.

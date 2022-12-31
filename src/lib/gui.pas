@@ -3,11 +3,11 @@ unit gui;
 interface
 
 uses
-  classes,
+  Classes,
   env,
-  graphics,
-  messages,
-  windows;
+  Graphics,
+  Messages,
+  Windows;
 
 const
   DWMAPI = 'DWMAPI.DLL';
@@ -35,20 +35,20 @@ type
     fHeight,
     fWidth
       :int32;
-    procedure setVisible(isVisible:boolean);
-    procedure _setSize(const x,y,width,height:int32);
-    procedure setLeft(const x:int32);
-    procedure setTop(const y:int32);
-    procedure setWidth(const width:int32);
-    procedure setHeight(const height:int32);
+    procedure SetVisible(isVisible:boolean);
+    procedure _SetSize(const x,y,width,height:int32);
+    procedure SetLeft(const x:int32);
+    procedure SetTop(const y:int32);
+    procedure SetWidth(const width:int32);
+    procedure SetHeight(const height:int32);
   protected
-    procedure setEnabled(isEnabled:boolean); virtual;
-    procedure _WM_PAINT(var canvas:tcanvas);virtual;
+    procedure SetEnabled(isEnabled:boolean); virtual;
+    procedure _WM_PAINT(var g:TCanvas);virtual;
   public
-    constructor create(parent:Container=nil);virtual;
-    destructor destroy;override;
-    function equals(obj:TObject):boolean;
-    procedure setSize(const x,y,width,height:int32);
+    constructor Create(parent:Container=NIL);virtual;
+    destructor Destroy;override;
+    function Equals(obj:TObject):boolean;
+    procedure SetSize(const x,y,width,height:int32);
     property ID:cardinal read fID;
     property Handle:HWND read fHandle;
     property Parent:Container read fParent;
@@ -63,11 +63,11 @@ type
   Container=class(Component)
   private
     fCaption:PAnsiChar;
-    procedure setCaption(const newCaption:PAnsiChar);
+    procedure SetCaption(const newCaption:PAnsiChar);
   protected
     fArrayOfComponents:array of Component;
   public
-    property Caption:PAnsiChar read fCaption write setCaption;
+    property Caption:PAnsiChar read fCaption write SetCaption;
   end;
 
   Window=class(Container)
@@ -75,29 +75,29 @@ type
     fWndClass:TWndClass;
     fWindowState:WindowState;
   protected
-    procedure _WM_PAINT(var canvas:tcanvas);override;
+    procedure _WM_PAINT(var g:TCanvas);override;
   public
-    constructor create(parent:Window=nil);
+    constructor Create(parent:Window=NIL);
   end;
 
   Edit=class(Component)
   public
-    constructor create(parent:Container);override;
+    constructor Create(parent:Container);override;
   end;
 
   Button=class(Component)
   public
-    constructor create(parent:Container);override;
+    constructor Create(parent:Container);override;
   end;
 
   deptocomApp=class
   private
     fMainWindow:Window;
-    procedure setMainWindow(mw:Window);
+    procedure SetMainWindow(mw:Window);
   public
-    constructor create;
-    procedure run;
-    property MainWindow:Window read fMainWindow write setMainWindow;
+    constructor Create;
+    procedure Run;
+    property MainWindow:Window read fMainWindow write SetMainWindow;
   end;
 
 var
@@ -106,7 +106,7 @@ var
 implementation
 
 uses
-  sysUtils;
+  SysUtils;
 
 var
   mainWindowHandle:HWND=0;
@@ -116,61 +116,61 @@ var
 
 var
   arrayOfComponents:array of Component; //todo componente criado vem para esse array...
-                                        //os que foram liberados da memória marcamos com nil
-  hWndIdMap:tstringlist;                //nosso mapa key-value para hWnd-ID (!precisamos de algo melhor!)
+                                        //os que foram liberados da memória marcamos com NIL
+  hWndIdMap:TStringList;                //nosso mapa key-value para hWnd-ID (!precisamos de algo melhor!)
 
-constructor Component.create(parent:Container=nil);
+constructor Component.Create(parent:Container=NIL);
 begin
   inherited create;
-  if parent<>nil then
+  if parent<>NIL then
     fParent:=parent;
   inc(componentID);
   fID:=componentID;
-  setLength(arrayOfComponents,componentID);
+  SetLength(arrayOfComponents,componentID);
 end;
 
-destructor Component.destroy;
+destructor Component.Destroy;
 begin
   if (fHandle<>0) and (fHandle<>INVALID_HANDLE_VALUE) then
-    destroyWindow(fHandle);
-  arrayOfComponents[fID-1]:=nil;
+    DestroyWindow(fHandle);
+  arrayOfComponents[fID-1]:=NIL;
   fHandle:=0;
   fID:=0;
   fLeft:=0;
   fTop:=0;
   fWidth:=0;
   fHeight:=0;
-  fEnabled:=false;
-  fVisible:=false;
-  fParent:=nil;
-  inherited destroy;
+  fEnabled:=FALSE;
+  fVisible:=FALSE;
+  fParent:=NIL;
+  inherited Destroy;
 end;
 
-procedure Component.setEnabled(isEnabled:boolean);
+procedure Component.SetEnabled(isEnabled:boolean);
 begin
   fEnabled:=isEnabled;
 end;
 
-procedure Component.setVisible(isVisible:boolean);
+procedure Component.SetVisible(isVisible:boolean);
 begin
   if (fHandle<>0) and (fHandle<>INVALID_HANDLE_VALUE) and (isVisible<>fVisible) then begin
     fVisible:=isVisible;
     if isVisible then
-      showWindow(fHandle,SW_SHOWNORMAL)
+      ShowWindow(fHandle,SW_SHOWNORMAL)
     else
-      showWindow(fHandle,SW_HIDE);
+      ShowWindow(fHandle,SW_HIDE);
   end;
 end;
 
-function Component.equals(obj:TObject):boolean;
+function Component.Equals(obj:TObject):boolean;
 begin
-  if (obj=nil) or (obj.ClassType<>self.ClassType) then
-    result:=false
+  if (obj=NIL) or (obj.ClassType<>self.ClassType) then
+    result:=FALSE
   else
     result:=Component(obj).ID=Component(self).ID;
 end;
 
-procedure Component._setSize(const x,y,width,height:int32);
+procedure Component._SetSize(const x,y,width,height:int32);
 begin
   if (fHandle<>0) and (fHandle<>INVALID_HANDLE_VALUE) and ((x<>fLeft) or (y<>fTop) or (width<>fWidth) or (height<>fHeight)) then begin
     fLeft:=x;
@@ -179,56 +179,56 @@ begin
     fHeight:=height;
 
     if self is Window then
-      setWindowPos(fHandle,0,x,y,width,height,SWP_FRAMECHANGED);
+      SetWindowPos(fHandle,0,x,y,width,height,SWP_FRAMECHANGED);
   end;
 end;
 
-procedure Component.setSize(const x,y,width,height:int32);
+procedure Component.SetSize(const x,y,width,height:int32);
 begin
-  _setSize(x,y,width,height);
+  _SetSize(x,y,width,height);
 end;
 
-procedure Component.setLeft(const x:int32);
+procedure Component.SetLeft(const x:int32);
 begin
-  _setSize(x,fTop,fWidth,fHeight);
+  _SetSize(x,fTop,fWidth,fHeight);
 end;
 
-procedure Component.setTop(const y:int32);
+procedure Component.SetTop(const y:int32);
 begin
-  _setSize(fLeft,y,fWidth,fHeight);
+  _SetSize(fLeft,y,fWidth,fHeight);
 end;
 
-procedure Component.setWidth(const width:int32);
+procedure Component.SetWidth(const width:int32);
 begin
-  _setSize(fLeft,fTop,width,fHeight);
+  _SetSize(fLeft,fTop,width,fHeight);
 end;
 
-procedure Component.setHeight(const height:int32);
+procedure Component.SetHeight(const height:int32);
 begin
-  _setSize(fLeft,fTop,fWidth,height);
+  _SetSize(fLeft,fTop,fWidth,height);
 end;
 
-procedure Component._WM_PAINT(var canvas:tcanvas);
+procedure Component._WM_PAINT(var g:TCanvas);
 begin
   //NADA!
 end;
 
-procedure Container.setCaption(const newCaption:PAnsiChar);
+procedure Container.SetCaption(const newCaption:PAnsiChar);
 begin
   if (fHandle<>0) and (fHandle<>INVALID_HANDLE_VALUE) and (newCaption<>self.fCaption) then
   begin
-    setWindowText(self.Handle,newCaption);
+    SetWindowText(self.Handle,newCaption);
     fCaption:=newCaption;
   end;
 end;
 
-function hWndToID(const hWnd:HWND):int32;
+function HWndToID(const hWnd:HWND):int32;
 begin
-  result:=strtoint(hWndIdMap.Values[inttostr(hWND)]); //possivelmente usar tstringlist como mapa key-value não é uma boa, mas...
+  result:=StrToInt(hWndIdMap.Values[IntToStr(hWnd)]); //possivelmente usar TStringList como mapa key-value não é uma boa, mas...
                                                       //aceite como provisório!
 end;
 
-function getComponent(const hWnd:HWND):Component;
+function GetComponent(const hWnd:HWND):Component;
 begin
   result:=arrayOfComponents[hWndToID(hWnd)-1];
 end;
@@ -237,7 +237,7 @@ function WindowProc(hndl: HWND; uMsg: UINT; wParam: WPARAM; lParam: LPARAM):
   LRESULT; stdcall;
 var
   _component:Component;
-  _canvas:tcanvas;
+  _canvas:TCanvas;
   wParamLWord,
   wParamHWord,
   lParamLWord,
@@ -245,7 +245,7 @@ var
     :WORD;
 begin
   //usamos o processamento default de mensagem
-  result:=defWindowProc(hndl,uMsg,wParam,lParam);
+  result:=DefWindowProc(hndl,uMsg,wParam,lParam);
 
   wParamLWord:=LOWORD(wParam);
   wParamHWord:=HIWORD(wParam);
@@ -260,12 +260,12 @@ begin
 
     WM_PAINT:begin
       _component:=getComponent(hndl); //obtemos o componente destinatário da mensagem
-      if _component<>nil then begin   //e delegamos um canvas para a procedure _WM_PAINT do componente
-        _canvas:=tcanvas.create;      //para que ela faça o trabalho
-        _canvas.handle:=getDC(hndl);
+      if _component<>NIL then begin   //e delegamos um canvas para a procedure _WM_PAINT do componente
+        _canvas:=TCanvas.Create;      //para que ela faça o trabalho
+        _canvas.handle:=GetDC(hndl);
         _component._WM_PAINT(_canvas);
-        releaseDC(hndl,_canvas.handle);
-        _canvas.free;//NÃO LIBERE O CANVAS NA PROCEDURE _WM_PAINT!
+        ReleaseDC(hndl,_canvas.handle);
+        _canvas.Free;//NÃO LIBERE O CANVAS NA PROCEDURE _WM_PAINT!
       end;//end-if
     end;//case:WM_PAINT
 
@@ -290,8 +290,8 @@ begin
 
             //um botão foi clicado
             BN_CLICKED{=0}:begin
-              _component:=getComponent(HWND(lParam));
-              if _component<>nil then begin
+              _component:=GetComponent(HWND(lParam));
+              if _component<>NIL then begin
                 //
                 //
                 //
@@ -315,30 +315,30 @@ begin
   end;//case:uMsg
 end;
 
-constructor Window.create(parent:Window=nil);
+constructor Window.Create(parent:Window=NIL);
 var
   styleFlags:cardinal;
   parentHandle:HWND;
 begin
-  inherited create(parent);
-  inc(windowNum);
+  inherited Create(parent);
+  Inc(windowNum);
   // Set up window class
   with fWndClass do begin
-    Style := 0;
-    lpfnWndProc := @WindowProc;
-    cbClsExtra := 0; // no extra class memory
-    cbWndExtra := 0; // no extra window memory
-    hInstance := SysInit.HInstance; // application instance
-    hIcon := 0; // use default icon
-    hCursor := LoadCursor(0, IDC_ARROW); // use arrow cursor
-    hbrBackground := COLOR_WINDOW; // standard window colour
-    lpszMenuName := nil; // no menu resource
-    lpszClassName := PAnsiChar(ansistring(classname));
+    style:=0;
+    lpfnWndProc:=@WindowProc;
+    cbClsExtra:=0; // no extra class memory
+    cbWndExtra:=0; // no extra window memory
+    hInstance:=SysInit.HInstance; // application instance
+    hIcon:=0; // use default icon
+    hCursor:=LoadCursor(0, IDC_ARROW); // use arrow cursor
+    hbrBackground:=COLOR_WINDOW; // standard window colour
+    lpszMenuName:=NIL; // no menu resource
+    lpszClassName:=PAnsiChar(ansistring(classname));
   end;
 
   Windows.RegisterClass(self.fWndClass);  //Don't use Delphi's version of RegisterClass
 
-  if parent=nil then begin
+  if parent=NIL then begin
     styleFlags:=WS_OVERLAPPEDWINDOW;
     parentHandle:=0;
   end else begin
@@ -367,47 +367,47 @@ begin
   end;
 
   arrayOfComponents[fID-1]:=self;
-  hWndIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
+  hWndIdMap.Add(IntToStr(fHandle)+'='+IntToStr(fID));
 end;
 
-procedure Window._WM_PAINT(var canvas:tcanvas);
+procedure Window._WM_PAINT(var g:TCanvas);
 var
-  _rect:trect;
+  _rect:TRect;
 begin
-  inherited _WM_PAINT(canvas);
+  inherited _WM_PAINT(g);
   _rect.Left:=50;
   _rect.Top:=50;
   _rect.Bottom:=150;
   _rect.Right:=200;
-  canvas.FillRect(_rect);
-  canvas.Ellipse(60,60,200,200);
-  canvas.PenPos:=point(90,100);
-  canvas.LineTo(90,400);
+  g.FillRect(_rect);
+  g.Ellipse(60,60,200,200);
+  g.PenPos:=point(90,100);
+  g.LineTo(90,400);
 end;
 
-constructor Edit.create(parent:Container);
+constructor Edit.Create(parent:Container);
 var
   hControlFont:HFONT;
   lfControl:TLogFont;
   parentHandle:HWND;
 begin
-  inherited create(parent);
-  if parent=nil then begin
+  inherited Create(parent);
+  if parent=NIL then begin
     parentHandle:=0;
-    fParent:=nil;
+    fParent:=NIL;
   end else begin
     parentHandle:=parent.Handle;
     fParent:=parent;
   end;
-  fHandle:=createWindowEx(WS_EX_CLIENTEDGE, // Extended style
+  fHandle:=CreateWindowEx(WS_EX_CLIENTEDGE, // Extended style
     'EDIT', // EDIT creates an edit box
     'Edit1',// Name of window - also the text that will be in it
-    WS_CHILD OR WS_VISIBLE OR ES_AUTOHSCROLL OR ES_NOHIDESEL, // style flags
+    WS_CHILD or WS_VISIBLE or ES_AUTOHSCROLL or ES_NOHIDESEL, // style flags
     8, 16, 160, 21, // Position and size
     parentHandle, // Parent window
     0, // Menu - none because it's an edit box(!)
     SysInit.HInstance, // Application instance
-    nil); // No creation data
+    NIL); // No creation data
 
   if (fHandle=0) or (fHandle=INVALID_HANDLE_VALUE) then begin
     LogError('libgui: não foi possível criar o edit');
@@ -415,7 +415,7 @@ begin
   end;
 
   arrayOfComponents[fID-1]:=self;
-  hWndIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
+  hWndIdMap.Add(IntToStr(fHandle)+'='+IntToStr(fID));
 
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
@@ -424,31 +424,31 @@ begin
   lfControl.lfFaceName:='MS Sans Serif';
   // Create the font
   hControlFont:=CreateFontIndirect(lfControl);
-  sendMessage(self.fHandle, WM_SETFONT, hControlFont, 1);
+  SendMessage(self.fHandle, WM_SETFONT, hControlFont, 1);
 end;
 
-constructor Button.create(parent:Container);
+constructor Button.Create(parent:Container);
 var
   hControlFont:HFONT;
   lfControl:TLogFont;
   parentHandle:HWND;
 begin
-  inherited create(parent);
-  if parent=nil then begin
+  inherited Create(parent);
+  if parent=NIL then begin
     parentHandle:=0;
-    fParent:=nil;
+    fParent:=NIL;
   end else begin
     parentHandle:=parent.Handle;
     fParent:=parent;
   end;
-  fHandle:=createWindow('BUTTON', // BUTTON creates an button, obviously
+  fHandle:=CreateWindow('BUTTON', // BUTTON creates an button, obviously
     'Show Message', // Name of window - also the text that will be in it
-    WS_CHILD OR WS_VISIBLE OR BS_PUSHBUTTON OR BS_TEXT, // style flags
+    WS_CHILD or WS_VISIBLE or BS_PUSHBUTTON or BS_TEXT, // style flags
     8, 40, 96, 25, // Position and size
     parentHandle, // Parent window
     0, // Menu - none because it's a button
     SysInit.HInstance, // Application instance
-    nil); // No creation data
+    NIL); // No creation data
 
   if (fHandle=0) or (fHandle=INVALID_HANDLE_VALUE) then begin
     LogError('libgui: não foi possível criar o botão');
@@ -456,7 +456,7 @@ begin
   end;
 
   arrayOfComponents[fID-1]:=self;
-  hWndIdMap.add(inttostr(fHandle)+'='+inttostr(fID));
+  hWndIdMap.Add(IntToStr(fHandle)+'='+IntToStr(fID));
 
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
@@ -465,34 +465,34 @@ begin
   lfControl.lfFaceName:='MS Sans Serif';
   // Create the font
   hControlFont:=CreateFontIndirect(lfControl);
-  sendMessage(self.fHandle, WM_SETFONT, hControlFont, 1);
+  SendMessage(self.fHandle, WM_SETFONT, hControlFont, 1);
 end;
 
-constructor deptocomApp.create;
+constructor deptocomApp.Create;
 begin
-  inherited create;
-  fMainWindow:=nil;
+  inherited Create;
+  fMainWindow:=NIL;
 end;
 
-procedure deptocomApp.setMainWindow(mw:Window);
+procedure deptocomApp.SetMainWindow(mw:Window);
 begin
   if mainWindowHandle<>0 then
     raise Exception.Create('Já há uma MainWindow definida. Não é possível redefiní-la.');
-  if mw<>nil then begin
+  if mw<>NIL then begin
     fMainWindow:=mw;
     mainWindowHandle:=mw.Handle;
   end;
 end;
 
-procedure deptocomApp.run;
+procedure deptocomApp.Run;
 var
-  msg:tmsg;
+  msg:TMsg;
 begin
-  if fMainWindow<>nil then begin
-    fMainWindow.Visible:=true;
-    while getMessage(msg,0,0,0)<>BOOL(FALSE) do begin
-      translateMessage(msg);
-      dispatchMessage(msg);
+  if fMainWindow<>NIL then begin
+    fMainWindow.Visible:=TRUE;
+    while GetMessage(msg,0,0,0)<>BOOL(FALSE) do begin
+      TranslateMessage(msg);
+      DispatchMessage(msg);
     end;
   end;
 end;
@@ -500,8 +500,8 @@ end;
 initialization
   componentID:=0;
   windowNum:=0;
-  hWndIdMap:=tstringlist.create;
-  myApp:=deptocomApp.create;
+  hWndIdMap:=TStringList.Create;
+  myApp:=deptocomApp.Create;
 finalization
   componentID:=0;
   windowNum:=0;

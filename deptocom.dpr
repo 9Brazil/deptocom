@@ -1,6 +1,6 @@
 program deptocom;
 
-//{$APPTYPE Console}
+{$APPTYPE Console}
 
 uses
   env in 'src\lib\env.pas',
@@ -11,7 +11,7 @@ var
   mainWindow:Window;
 
 begin
-  mainWindow:=Window.create;
+  mainWindow:=Window.Create;
   myApp.MainWindow:=mainWindow;
-  myApp.run;
+  myApp.Run;
 end.

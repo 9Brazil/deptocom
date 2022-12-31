@@ -2,12 +2,12 @@ unit utils;
 
 interface
 
-function byteToStr(const b:byte):string;
-function shortToStr(const s:shortint):string;
+function ByteToStr(const b:byte):string;
+function ShortToStr(const s:shortint):string;
 
 //v. https://stackoverflow.com/questions/4420188/how-to-format-a-unix-timestamp-in-delphi
-function datetimeToUnixtime(const datetime:TDatetime):int64;
-function unixtimeToDatetime(const unixtime:int64):TDatetime;
+function DatetimeToUnixTime(const datetime:TDatetime):int64;
+function UnixTimeToDatetime(const unixTime:int64):TDatetime;
 
 implementation
 
@@ -47,13 +47,13 @@ const
     '248',	'249',	'250',	'251',	'252',	'253',	'254',	'255'
   );
 
-function byteToStr(const b:byte):string;
+function ByteToStr(const b:byte):string;
 begin
   result:=BYTESTRTBL[b];
 end;
 
 (*
-function shortToStr(const s:shortint):string;
+function ShortToStr(const s:shortint):string;
 begin
   if s>-1 then
     result:=BYTESTRTBL[s]
@@ -98,20 +98,20 @@ const
     '120',    '121',    '122',    '123',    '124',    '125',    '126',    '127'
   );
 
-function shortToStr(const s:shortint):string;
+function ShortToStr(const s:shortint):string;
 begin
   result:=SHORTSTRTBL[s];
 end;
 
 
-function datetimeToUnixtime(const datetime:TDatetime):int64;
+function DatetimeToUnixTime(const datetime:TDatetime):int64;
 begin
-  result:=trunc((datetime-25569)*86400);
+  result:=Trunc((datetime-25569)*86400);
 end;
 
-function unixtimeToDatetime(const unixtime:int64):TDatetime;
+function UnixTimeToDatetime(const unixTime:int64):TDatetime;
 begin
-  result:=(unixtime/86400)+25569;
+  result:=(unixTime/86400)+25569;
 end;
 
 end.

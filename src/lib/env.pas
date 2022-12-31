@@ -3,9 +3,9 @@ unit env{ironment};
 interface
 
 uses
-  shlobj,
-  sysutils,
-  windows;
+  ShlObj,
+  SysUtils,
+  Windows;
 
 const
   DIRECTORY_SEPARATOR='\';
@@ -15,7 +15,7 @@ const
 
   SOFTWARE_NAME='deptocom';
   SOFTWARE_REGISTRYKEY='Software'+DIRECTORY_SEPARATOR+SOFTWARE_NAME+DIRECTORY_SEPARATOR;
-  STDOUTPUT_FILE='stdout.txt';//default (tentamos redirecionar a saída padrão para esse arquivo)  
+  STDOUTPUT_FILE='stdout.txt';//default (tentamos redirecionar a saída padrão para esse arquivo)
   LOG_SUFFIX='.log';//default
   LOG_FILE=SOFTWARE_NAME+LOG_SUFFIX;//default
   BINARIES_FOLDER_NAME='bin';//default
@@ -48,6 +48,10 @@ type
   int16=smallint;
   int32=integer;
 
+  Edeptocom = class(Exception);
+
+  LogLevel = (llFatal=0,llError,llWarning,llInfo,llDebug);
+
   SpecialDirID = (
     sidDesktop=CSIDL_DESKTOP,
     sidMyDocuments=CSIDL_PERSONAL,
@@ -58,16 +62,8 @@ type
     sidAppData=CSIDL_APPDATA
   );
 
-  WinVersionInfo=record
-    wVersion,
-    wMajorVersion,
-    wMinorVersion,
-    wBuild
-      :DWORD;
-  end;
-
   WindowsEdition = (
-    w3_11=3,
+    w3_x=3,
     w95,
     w98,
     wNT4,
@@ -76,6 +72,7 @@ type
     wXP,
     wXP64,
     wSERVER2003,
+    wHOMESERVER,
     wSERVER2003R2,
     wVISTA,
     wSERVER2008,
@@ -92,14 +89,32 @@ type
     w11
   );
 
-  LogLevel = (llFatal=0,llError,llWarning,llInfo,llDebug);
+  _OSVERSIONINFOA = record
+    dwOSVersionInfoSize: DWORD;
+    dwMajorVersion: DWORD;
+    dwMinorVersion: DWORD;
+    dwBuildNumber: DWORD;
+    dwPlatformId: DWORD;
+    szCSDVersion: array[0..127] of AnsiChar;
+    wServicePackMajor: WORD;
+    wServicePackMinor: WORD;
+    wSuiteMask: WORD;
+    wProductType: BYTE;
+    wReserved: BYTE;
+  end;
 
-  Edeptocom = class(Exception);
+  _OSVERSIONINFO = _OSVERSIONINFOA;
+  TOSVersionInfoA = _OSVERSIONINFOA;
+  TOSVersionInfo = TOSVersionInfoA;
+  OSVERSIONINFOA = _OSVERSIONINFOA;
 
 const
+  LogLevelFlag:array[llFatal..llDebug] of char = (LL_FTL,LL_ERR,LL_WRN,LL_INF,LL_DBG);
+  LogLevelLabel:array[llFatal..llDebug] of string = ('FATAL','ERROR','WARNING','INFO','DEBUG');
+
   //v. https://learn.microsoft.com/en-us/windows/win32/sysinfo/operating-system-version
-  WindowsEditionName:array[w3_11..w11] of string = (
-    'Windows 3.11',
+  WindowsEditionName:array[low(WindowsEdition)..high(WindowsEdition)] of string = (
+    'Windows 3.x',
     'Windows 95',
     'Windows 98',
     'Windows NT 4.0',
@@ -108,6 +123,7 @@ const
     'Windows XP',
     'Windows XP x64',
     'Windows Server 2003',
+    'Windows Home Server',
     'Windows Server 2003 R2',
     'Windows Vista',
     'Windows Server 2008',
@@ -123,8 +139,6 @@ const
     'Windows 10',
     'Windows 11'
   );
-  LogLevelFlag:array[llFatal..llDebug] of char = (LL_FTL,LL_ERR,LL_WRN,LL_INF,LL_DBG);
-  LogLevelLabel:array[llFatal..llDebug] of string = ('FATAL','ERROR','WARNING','INFO','DEBUG');
 
 function GetUnitName(const o:TObject):shortstring;
 
@@ -140,10 +154,11 @@ procedure HideConsole;
 procedure ShowConsole;
 function ConsoleIsVisible:boolean;
 
-function WIN_VERSION_INFO:WinVersionInfo;
+function GetVersionEx(var lpVersionInformation: TOSVersionInfo): BOOL; stdcall;
+  external kernel32 name 'GetVersionExA';
+function WINDOWS_VERSION_INFO:TOSVersionInfo;
 function WINDOWS_VERSION:string;
-function WinEdition(wid:WindowsEdition):string;overload;
-function WinEdition(wv:WinVersionInfo):string;overload;
+function WINDOWS_EDITION:WindowsEdition;
 
 function SCREEN_SIZE:TSize;
 function OS_USER:ansistring;
@@ -157,21 +172,50 @@ function TMPDIR:ansistring;
 function STDOUTPUTFILE:ansistring;
 function CURRENT_TIMESTAMP:ansistring;
 
-procedure LogFatal(const msg:ansistring; const errorCode:int32; const flushmsg:boolean=false);
-procedure LogError(const msg:ansistring; const flushmsg:boolean=false);overload;
-procedure LogError(const e:Exception; const flushmsg:boolean=false);overload;
-procedure LogWarn(const msg:ansistring; const flushmsg:boolean=false);
-procedure LogInfo(const msg:ansistring; const flushmsg:boolean=false);
-procedure LogDebug(const msg:ansistring; const flushmsg:boolean=false);
-procedure Log(const level:LogLevel; const msg:ansistring; const flushmsg:boolean=false; errorCode:int32=0);
+procedure LogFatal(const msg:ansistring; const errorCode:int32; const flushmsg:boolean=FALSE);
+procedure LogError(const msg:ansistring; const flushmsg:boolean=FALSE);overload;
+procedure LogError(const e:Exception; const flushmsg:boolean=FALSE);overload;
+procedure LogWarn(const msg:ansistring; const flushmsg:boolean=FALSE);
+procedure LogInfo(const msg:ansistring; const flushmsg:boolean=FALSE);
+procedure LogDebug(const msg:ansistring; const flushmsg:boolean=FALSE);
+procedure Log(const level:LogLevel; const msg:ansistring; const flushmsg:boolean=FALSE; errorCode:int32=0);
 
 implementation
 
 uses
-  activex,
-  registry,
+  ActiveX,
+  Registry,
   threads,
-  typinfo;
+  TypInfo;
+
+const
+  //v. https://learn.microsoft.com/pt-br/windows/win32/api/winuser/nf-winuser-getsystemmetrics
+  //System Metrics
+  SM_TABLETPC     = 86; //Diferente de zero se o sistema operacional atual for o Windows XP Tablet PC Edition ou se o sistema operacional atual for Windows Vista ou Windows 7 e o serviço tablet pc input for iniciado; caso contrário, 0.
+  SM_MEDIACENTER  = 87; //Diferente de zero se o sistema operacional atual for o Windows XP, Media Center Edition, 0 se não for.
+  SM_STARTER      = 88; //Diferente de zero se o sistema operacional atual for Windows 7 Starter Edition, Windows Vista Starter ou Windows XP Starter Edition; caso contrário, 0.
+  SM_SERVERR2     = 89; //O número de build se o sistema for Windows Server 2003 R2; caso contrário, 0.
+
+  //v. https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-osversioninfoexa
+  //wSuiteMask (A bit mask that identifies the product suites available on the system. This member can be a combination of the following values.)
+  VER_SUITE_BACKOFFICE                = $00000004;	//Microsoft BackOffice components are installed.
+  VER_SUITE_BLADE                     = $00000400;	//Windows Server 2003, Web Edition is installed.
+  VER_SUITE_COMPUTE_SERVER            = $00004000;	//Windows Server 2003, Compute Cluster Edition is installed.
+  VER_SUITE_DATACENTER                = $00000080;	//Windows Server 2008 Datacenter, Windows Server 2003, Datacenter Edition, or Windows 2000 Datacenter Server is installed.
+  VER_SUITE_ENTERPRISE                = $00000002;	//Windows Server 2008 Enterprise, Windows Server 2003, Enterprise Edition, or Windows 2000 Advanced Server is installed. Refer to the Remarks section for more information about this bit flag.
+  VER_SUITE_EMBEDDEDNT                = $00000040;	//Windows XP Embedded is installed.
+  VER_SUITE_PERSONAL                  = $00000200;	//Windows Vista Home Premium, Windows Vista Home Basic, or Windows XP Home Edition is installed.
+  VER_SUITE_SINGLEUSERTS              = $00000100;	//Remote Desktop is supported, but only one interactive session is supported. This value is set unless the system is running in application server mode.
+  VER_SUITE_SMALLBUSINESS             = $00000001;	//Microsoft Small Business Server was once installed on the system, but may have been upgraded to another version of Windows. Refer to the Remarks section for more information about this bit flag.
+  VER_SUITE_SMALLBUSINESS_RESTRICTED  = $00000020;	//Microsoft Small Business Server is installed with the restrictive client license in force. Refer to the Remarks section for more information about this bit flag.
+  VER_SUITE_STORAGE_SERVER            = $00002000;	//Windows Storage Server 2003 R2 or Windows Storage Server 2003is installed.
+  VER_SUITE_TERMINAL                  = $00000010;	//Terminal Services is installed. This value is always set. If VER_SUITE_TERMINAL is set but VER_SUITE_SINGLEUSERTS is not set, the system is running in application server mode.
+  VER_SUITE_WH_SERVER                 = $00008000;	//Windows Home Server is installed.
+  VER_SUITE_MULTIUSERTS               = $00020000;	//AppServer mode is enabled.
+  //wProductType (Any additional information about the system. This member can be one of the following values.)
+  VER_NT_DOMAIN_CONTROLLER  = $0000002;	//The system is a domain controller and the operating system is Windows Server 2012 , Windows Server 2008 R2, Windows Server 2008, Windows Server 2003, or Windows 2000 Server.
+  VER_NT_SERVER             = $0000003;	//The operating system is Windows Server 2012, Windows Server 2008 R2, Windows Server 2008, Windows Server 2003, or Windows 2000 Server. Note that a server that is also a domain controller is reported as VER_NT_DOMAIN_CONTROLLER, not VER_NT_SERVER.
+  VER_NT_WORKSTATION        = $0000001;	//The operating system is Windows 8, Windows 7, Windows Vista, Windows XP Professional, Windows XP Home Edition, or Windows 2000 Professional.
 
 var
   _LOGFILENAME,
@@ -185,13 +229,13 @@ var
   logfile
     :textfile;
   logfileOK
-    :boolean=false;
+    :boolean=FALSE;
   consoleVisible
-    :boolean=false;
+    :boolean=FALSE;
   StdOutputFileOK
-    :boolean=false;
+    :boolean=FALSE;
   unitInitializationOK
-    :boolean=false;
+    :boolean=FALSE;
 
 function GetUnitName(const o:TObject):shortstring;
 var
@@ -199,13 +243,13 @@ var
 begin
   result:='';
   try
-    if (o<>nil) and (o.ClassInfo<>nil) then begin
+    if (o<>NIL) and (o.ClassInfo<>NIL) then begin
       tpdt:=GetTypeData(o.ClassInfo);
-      if tpdt<>nil then
+      if tpdt<>NIL then
         result:=tpdt^.UnitName;
     end;
   except
-    // o<>nil
+    // o<>NIL
     // mas não aponta para um objeto (aponta para uma área de memória inadequada)
   end;
 end;
@@ -240,7 +284,7 @@ begin
   reg:=TRegistry.Create(KEY_ALL_ACCESS);
   try
     reg.rootkey:=HKEY_CURRENT_USER;
-    if reg.OpenKey(SOFTWARE_REGISTRYKEY,true) then
+    if reg.OpenKey(SOFTWARE_REGISTRYKEY,TRUE) then
       reg.CloseKey;
   finally
     reg.Free;
@@ -251,16 +295,16 @@ function QueryRegistryValue(const nome:ansistring; out valor:ansistring; const k
 var
   reg:TRegistry;
 begin
-  result:=false;
+  result:=FALSE;
   try
     reg:=TRegistry.Create(KEY_QUERY_VALUE);
     try
       reg.rootkey:=rootkey;
-      if not reg.OpenKey(key,false) then Exit;
+      if not reg.OpenKey(key,FALSE) then Exit;
       try
         if reg.ValueExists(nome) then begin
           valor:=reg.ReadString(nome);
-          result:=true;
+          result:=TRUE;
         end;
       finally
         reg.CloseKey;
@@ -283,15 +327,15 @@ function SetRegistryValue(const nome, valor : ansistring; const key:ansistring=S
 var
   reg:TRegistry;
 begin
-  result:=false;
+  result:=FALSE;
   try
     reg:=TRegistry.Create(KEY_SET_VALUE);
     try
       reg.rootkey:=rootkey;
-      if not reg.OpenKey(key,false) then Exit;
+      if not reg.OpenKey(key,FALSE) then Exit;
       reg.WriteString(nome,valor);
       reg.CloseKey;
-      result:=true;
+      result:=TRUE;
     finally
       reg.Free;
     end;
@@ -315,7 +359,7 @@ procedure HideConsole;
 begin
   if isConsole and consoleVisible then begin
     ShowWindow(GetConsoleWindow,SW_HIDE);
-    consoleVisible:=false;
+    consoleVisible:=FALSE;
   end;
 end;
 
@@ -323,7 +367,7 @@ procedure ShowConsole;
 begin
   if isConsole and (not consoleVisible) then begin
     ShowWindow(GetConsoleWindow,SW_NORMAL);
-    consoleVisible:=true;
+    consoleVisible:=TRUE;
   end;
 end;
 
@@ -332,41 +376,92 @@ begin
   result:=consoleVisible;
 end;
 
-//v. https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getversion
-//Depende do modo de compatibilidade (i.e., do manifesto) em que o software é executado!
-function WIN_VERSION_INFO:WinVersionInfo;
-var
-  wv:DWORD;
+function WINDOWS_VERSION_INFO:TOSVersionInfo;
+  function GetOSVersionInfo(out osvi:TOSVersionInfo):boolean;
+  begin
+    ZeroMemory(@osvi,SizeOf(osvi));
+    osvi.dwOSVersionInfoSize:=SizeOf(TOSVersionInfo);
+    result:=GetVersionEx(osvi)<>BOOL(0);
+  end;
 begin
-  wv:=GetVersion;
-  result.wVersion:=wv;
-  result.wMajorVersion:=DWORD(LOBYTE(LOWORD(wv)));
-  result.wMinorVersion:=DWORD(HIBYTE(LOWORD(wv)));
-  if wv<$80000000 then
-    result.wBuild:=DWORD(HIWORD(wv));
+  GetOSVersionInfo(result);
 end;
 
 function WINDOWS_VERSION:string;
 var
-  wv:WinVersionInfo;
+  wv:TOSVersionInfo;
 begin
-  wv:=WIN_VERSION_INFO;
-  with wv do begin
-    result:='Microsoft Windows versão '+intToStr(wMajorVersion)+'.'+intToStr(wMinorVersion)+'.'+intToStr(wBuild);
+  wv:=WINDOWS_VERSION_INFO;
+  result:='Microsoft Windows versão '+intToStr(wv.dwMajorVersion)+'.'+intToStr(wv.dwMinorVersion)+'.'+intToStr(wv.dwBuildNumber);
+end;
+
+function WINDOWS_EDITION:WindowsEdition;
+var
+  wv:TOSVersionInfo;
+  majorVersion,
+  minorVersion,
+  platformID
+    :DWORD;
+  isServerR2,
+  isNTWorkstation,
+  isAMD64,
+  isVerSuiteWHServer
+    :boolean;
+begin
+  wv:=WINDOWS_VERSION_INFO;
+  majorVersion:=wv.dwMajorVersion;
+  minorVersion:=wv.dwMinorVersion;
+  platformID:=wv.dwPlatformId;
+  isServerR2:=GetSystemMetrics(SM_SERVERR2)<>0;
+  isVerSuiteWHServer:=(wv.wSuiteMask and VER_SUITE_WH_SERVER)<>0;
+  isNTWorkstation:=wv.wProductType=VER_NT_WORKSTATION;
+  case majorVersion of
+    3:result:=w3_x;
+    4:case minorVersion of
+      0:begin
+        if platformID=VER_PLATFORM_WIN32_NT then
+          result:=wNT4
+        else
+          result:=w95;
+      end;
+      10:result:=w98;
+      90:result:=wME;
+    end;
+    5:case minorVersion of
+      0:result:=w2000;
+      1:result:=wXP;
+      2:begin
+        if isServerR2 then
+          result:=wSERVER2003R2
+        else
+        if isNTWorkstation and isAMD64 then
+          result:=wXP64
+        else
+        if isVerSuiteWHServer then
+          result:=wHOMESERVER
+        else
+        if not isServerR2 then
+          result:=wSERVER2003
+      end;
+    end;
+    6:case minorVersion of
+      0:begin
+
+      end;
+      1:begin
+
+      end;
+      2:begin
+
+      end;
+      3:begin
+
+      end;
+    end;
+    10:begin
+
+    end else result:=WindowsEdition(0){Windows desconhecido};
   end;
-end;
-
-function WinEdition(wid:WindowsEdition):string;
-begin
-  if (wid<low(WindowsEdition)) or (wid>high(WindowsEdition)) then
-    result:=''
-  else
-    result:=WindowsEditionName[wid];
-end;
-
-function WinEdition(wv:WinVersionInfo):string;
-begin
-  //
 end;
 
 function SCREEN_SIZE:TSize;
@@ -440,7 +535,7 @@ begin
   result:=FormatDatetime('yyyymmddhhnnsszzz',now);
 end;
 
-procedure LogFatal(const msg:ansistring; const errorCode:int32; const flushmsg:boolean=false);
+procedure LogFatal(const msg:ansistring; const errorCode:int32; const flushmsg:boolean=FALSE);
 var
   line:ansistring;
 begin
@@ -451,13 +546,13 @@ begin
     +LSTX
     +'err:'+IntToStr(errorCode)+':'
     +msg;
-  Writeln(logfile,line);
+  WriteLn(logfile,line);
   if flushmsg then
     flush(logfile);
   Runerror(errorCode);
 end;
 
-procedure LogError(const msg:ansistring; const flushmsg:boolean=false);
+procedure LogError(const msg:ansistring; const flushmsg:boolean=FALSE);
 var
   line:ansistring;
 begin
@@ -467,17 +562,17 @@ begin
     +OS_USER
     +LSTX
     +msg;
-  Writeln(logfile,line);
+  WriteLn(logfile,line);
   if flushmsg then
     flush(logfile);
 end;
 
-procedure LogError(const e:Exception; const flushmsg:boolean=false);
+procedure LogError(const e:Exception; const flushmsg:boolean=FALSE);
 begin
   LogError(GetUnitName2(e)+e.classname+': '+e.message);
 end;
 
-procedure LogWarn(const msg:ansistring; const flushmsg:boolean=false);
+procedure LogWarn(const msg:ansistring; const flushmsg:boolean=FALSE);
 var
   line:ansistring;
 begin
@@ -487,12 +582,12 @@ begin
     +OS_USER
     +LSTX
     +msg;
-  Writeln(logfile,line);
+  WriteLn(logfile,line);
   if flushmsg then
     flush(logfile);
 end;
 
-procedure LogInfo(const msg:ansistring; const flushmsg:boolean=false);
+procedure LogInfo(const msg:ansistring; const flushmsg:boolean=FALSE);
 var
   line:ansistring;
 begin
@@ -502,12 +597,12 @@ begin
     +OS_USER
     +LSTX
     +msg;
-  Writeln(logfile,line);
+  WriteLn(logfile,line);
   if flushmsg then
     flush(logfile);
 end;
 
-procedure LogDebug(const msg:ansistring; const flushmsg:boolean=false);
+procedure LogDebug(const msg:ansistring; const flushmsg:boolean=FALSE);
 var
   line:ansistring;
 begin
@@ -517,20 +612,20 @@ begin
     +OS_USER
     +LSTX
     +msg;
-  Writeln(logfile,line);
+  WriteLn(logfile,line);
   if flushmsg then
     flush(logfile);
 end;
 
-procedure Log(const level:LogLevel; const msg:ansistring; const flushmsg:boolean=false; errorCode:int32=0);
+procedure Log(const level:LogLevel; const msg:ansistring; const flushmsg:boolean=FALSE; errorCode:int32=0);
 begin
   case level of
-    llFatal:logFatal(msg,errorCode,flushmsg);
-    llError:logError(msg,flushmsg);
-    llWarning:logWarn(msg,flushmsg);
-    llInfo:logInfo(msg,flushmsg);
-    llDebug:logDebug(msg,flushmsg);
-    else raise Edeptocom.Create('env.Log: level de log desconhecido: '+intToStr(ord(level)));
+    llFatal:LogFatal(msg,errorCode,flushmsg);
+    llError:LogError(msg,flushmsg);
+    llWarning:LogWarn(msg,flushmsg);
+    llInfo:LogInfo(msg,flushmsg);
+    llDebug:LogDebug(msg,flushmsg);
+    else raise Edeptocom.Create('env.Log: level de log desconhecido: '+IntToStr(Ord(level)));
   end;
 end;
 
@@ -540,7 +635,7 @@ var
 begin
   if not isConsole then begin
     try if not QueryRegistryValue('stdoutputfile',stdof) then                           //podemos configurar um arquivo
-    raise edeptocom.Create('Falha na consulta [stdoutputfile] ao registro do Windows'); //de nosso gosto no registro do Windows;
+    raise Edeptocom.Create('Falha na consulta [stdoutputfile] ao registro do Windows'); //de nosso gosto no registro do Windows;
     except stdof:=''; end;                                                              //se algo der errado, tentamos um nome de
     if Trim(stdof)='' then stdof:=GetCurrentDir+DIRECTORY_SEPARATOR+STDOUTPUT_FILE;     //arquivo previamente definido (STDOUTPUT_FILE)
     AssignFile(System.Output,stdof);
@@ -548,8 +643,8 @@ begin
       Append(System.Output)
     else
       Rewrite(System.Output);
-    write;//dummy test
-    StdOutputFileOK:=true;
+    Write;//dummy test
+    StdOutputFileOK:=TRUE;
     stdoutFile:=stdof;
     SetRegistryValue('stdoutputfile',stdoutFile);
   end;
@@ -560,13 +655,13 @@ begin
   if (not isConsole) and StdOutputFileOK then
     CloseFile(System.Output);
   stdoutFile:='';
-  StdOutputFileOK:=false;
+  StdOutputFileOK:=FALSE;
 end;
 
 procedure OutputWriteLn(const arg:string);
 begin
   if (isConsole and consoleVisible) or ((not isConsole) and StdOutputFileOK) then
-    writeLn(arg);
+    WriteLn(arg);
 end;
 
 var
@@ -575,11 +670,11 @@ var
   errcode
     :int32=0;
   folderOK
-    :boolean=false;
+    :boolean=FALSE;
 
 initialization
   consoleVisible:=isConsole;
-  runAsync(SetStdOutputFile);
+  RunAsync(SetStdOutputFile);
 //  while not StdOutputFileOK do; //descomente se você quiser que o fluxo aguarde
                                   //a saída padrão StdOutput (System.Output) ser redirecionada
                                   //isto é, reconfigurada (no caso de não estarmos rodando em modo Console, {APPTYPE Console})
@@ -588,7 +683,7 @@ initialization
   //e o arquivo de log da aplicação
   //(sem um arquivo de log, não iniciamos a aplicação!)
   errcode:=RUNERR_NO_SOFTWARE_REGISTRYKEY;
-  logfileOK:=false;
+  logfileOK:=FALSE;
   try
     CreateSoftwareRegistryKey;
     errcode:=RUNERR_NO_LOGFILE;
@@ -617,7 +712,7 @@ initialization
     else
       Rewrite(logfile);
     write(logfile);//dummy test
-    logfileOK:=true;
+    logfileOK:=TRUE;
     errcode:=0;
     //ARQUIVO DE LOG OK!
   except
@@ -643,7 +738,7 @@ initialization
       raise Edeptocom.Create('não foi possível registrar o diretório do software [deptocomdir] no registro do Windows');
   except
     on e:Exception do
-      LogWarn(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message,true);
+      LogWarn(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message,TRUE);
   end;
 
   //verifica a existência de um diretório para arquivos temporários:
@@ -651,7 +746,7 @@ initialization
   //não existindo e não sendo possível criá-lo, lança o runerror RUNERR_NO_TMPDIR (FATAL!);
   //existindo, mas não sendo possível ler ou/e criar arquivos no diretório, lança também o RUNERR_NO_TMPDIR runerror (FATAL!)
   errcode:=RUNERR_NO_TMPDIR;
-  folderOK:=false;
+  folderOK:=FALSE;
   try
     if not QueryRegistryValue('tmpdir',_TMPDIR) then
       raise Edeptocom.Create('falha em consultar o diretório de arquivos temporários [tmpdir] no registro do Windows')
@@ -659,7 +754,7 @@ initialization
       errcode:=0;
   except
     on e:Exception do
-      LogWarn(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message,true);
+      LogWarn(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message,TRUE);
   end;
   folderOK:=not(errcode=RUNERR_NO_TMPDIR);
   try
@@ -667,11 +762,11 @@ initialization
       straux:=GetSpecialDir(sidAppData);
       //APENAS POR COMPLETUDE! NÃO OCORRE!
       if not DirectoryExists(straux) then begin
-        LogWarn(SOFTWARE_NAME+': env: initialization: o diretório '+straux+' não existe',true);
+        LogWarn(SOFTWARE_NAME+': env: initialization: o diretório '+straux+' não existe',TRUE);
         straux:=GetSpecialDir(sidMyDocuments);
         //TAMBÉM APENAS POR COMPLETUDE! NÃO OCORRE!
         if not DirectoryExists(straux) then
-          LogWarn(SOFTWARE_NAME+': env: initialization: o diretório '+straux+' não existe',true);
+          LogWarn(SOFTWARE_NAME+': env: initialization: o diretório '+straux+' não existe',TRUE);
       end;
       _TMPDIR:=straux+DIRECTORY_SEPARATOR+SOFTWARE_NAME;
       if not DirectoryExists(_TMPDIR) then
@@ -690,7 +785,7 @@ initialization
           raise Edeptocom.Create('não foi possível registrar o diretório de arquivos temporários [tmpdir] no registro do Windows');
       except
         on e:Exception do
-          LogWarn(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message,true);
+          LogWarn(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message,TRUE);
           //ainda que não tenhamos conseguido registrar o diretório
           //nós o temos e é possível iniciar a aplicação
           //emitimos apenas um aviso no arquivo de log
@@ -699,23 +794,23 @@ initialization
 
     //testar aqui os direitos de leitura e escrita no diretório de arquivos temporários
 
-    folderOK:=true;
+    folderOK:=TRUE;
   except
     on e:Exception do begin
       LogFatal(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message+': não foi possível criar um diretório para arquivos temporários',
-      RUNERR_NO_TMPDIR,true); //sem um diretório para arquivos temporários
+      RUNERR_NO_TMPDIR,TRUE); //sem um diretório para arquivos temporários
                               //não podemos iniciar o programa
     end;
   end;
 
   //verificar diretório de dados aqui
   errcode:=RUNERR_NO_DATADIR;
-  folderOK:=false;
+  folderOK:=FALSE;
 
   straux:='';
   errcode:=0;
-  folderOK:=false;
-  unitInitializationOK:=true;
+  folderOK:=FALSE;
+  unitInitializationOK:=TRUE;
 finalization
   if logfileOK then
     CloseFile(logfile);
