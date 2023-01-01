@@ -10,8 +10,6 @@ uses
   Windows;
 
 const
-  DWMAPI = 'DWMAPI.DLL';
-
   DEFAULT_WINDOW_X=40;
   DEFAULT_WINDOW_Y=40;
   DEFAULT_WINDOW_WIDTH=400;
@@ -47,7 +45,6 @@ type
   public
     constructor Create(parent:Container=NIL);virtual;
     destructor Destroy;override;
-    function Equals(obj:TObject):boolean;
     procedure SetSize(const x,y,width,height:int32);
     property ID:cardinal read fID;
     property Handle:HWND read fHandle;
@@ -108,6 +105,9 @@ implementation
 uses
   SysUtils;
 
+const
+  DWMAPI = 'DWMAPI.DLL';
+
 var
   mainWindowHandle:HWND=0;
   componentID,
@@ -160,14 +160,6 @@ begin
     else
       ShowWindow(fHandle,SW_HIDE);
   end;
-end;
-
-function Component.Equals(obj:TObject):boolean;
-begin
-  if (obj=NIL) or (obj.ClassType<>self.ClassType) then
-    result:=FALSE
-  else
-    result:=Component(obj).ID=Component(self).ID;
 end;
 
 procedure Component._SetSize(const x,y,width,height:int32);

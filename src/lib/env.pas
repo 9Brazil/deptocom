@@ -25,12 +25,11 @@ const
   LOGIN_TABLE='login.dat';//default
 
   //CUSTOM RUNTIME ERROR CODES
-  RUNERR_NO_SOFTWARE_REGISTRYKEY=51;
-  RUNERR_NO_LOGFILE=52;
-  //RUNERR_INVALID_BINDIR=53;
-  RUNERR_NO_TMPDIR=54;
-  RUNERR_NO_DATADIR=55;
-  RUNERR_NO_LOGINTABLE=56;
+  RUNERR_NO_SOFTWARE_REGISTRYKEY  = 51;
+  RUNERR_NO_LOGFILE               = 52;
+  RUNERR_NO_TMPDIR                = 53;
+  RUNERR_NO_DATADIR               = 54;
+  RUNERR_NO_LOGINTABLE            = 55;
 
   //LOG-LEVEL FLAGS
   LL_FTL='F';//FATAL
@@ -111,9 +110,7 @@ type
     wSERVER2008R2,
     w7,
     wSERVER2012,
-    w8,
-    wSERVER2012R2,
-    w8_1
+    w8
   );
 
 const
@@ -133,9 +130,7 @@ const
     'Windows Server 2008 R2',
     'Windows 7',
     'Windows Server 2012',
-    'Windows 8',
-    'Windows Server 2012 R2',
-    'Windows 8.1'
+    'Windows 8'
   );
 
 function GetUnitName(const o:TObject):shortstring;
@@ -365,9 +360,7 @@ begin
   majorVersion:=WINDOWS_MAJOR_VERSION;
   minorVersion:=WINDOWS_MINOR_VERSION;
 
-  if majorVersion<=4 then
-    sysinfo.wProcessorArchitecture:=PROCESSOR_ARCHITECTURE_UNKNOWN//corrigir!
-  else
+  sysinfo.wProcessorArchitecture:=PROCESSOR_ARCHITECTURE_UNKNOWN;
   if (majorVersion=5) and (minorVersion=0) {Windows 2000} then
     GetSystemInfo(sysinfo)
   else
@@ -468,54 +461,56 @@ var
   isVerSuiteWHServer
     :boolean;
 begin
-  wv:=WINDOWS_VERSION_INFO;
-  majorVersion:=wv.dwMajorVersion;
-  minorVersion:=wv.dwMinorVersion;
-  platformID:=wv.dwPlatformId;
-  isServerR2:=GetSystemMetrics(SM_SERVERR2)<>0;
-  isVerSuiteWHServer:=(wv.wSuiteMask and VER_SUITE_WH_SERVER)<>0;
-  isNTWorkstation:=wv.wProductType=VER_NT_WORKSTATION;
-  isAMD64:=PROCESSOR_ARCHITECTURE=archAMD64;
-  case majorVersion of
-    5:case minorVersion of
-      0:result:=w2000;
-      1:result:=wXP;
-      2:begin
-        if isServerR2 then
-          result:=wSERVER2003R2
-        else
-        if isNTWorkstation and isAMD64 then
-          result:=wXP64
-        else
-        if isVerSuiteWHServer then
-          result:=wHOMESERVER
-        else
-        if not isServerR2 then
-          result:=wSERVER2003
+  if dwVersion=0 then
+    WINDOWS_VERSION;
+
+  majorVersion:=dwMajorVersion;
+  minorVersion:=dwMinorVersion;
+
+  result:=WindowsEdition(0);
+  if (majorVersion=5) or ((majorVersion=6) and (minorVersion<3)) then begin
+    wv:=WINDOWS_VERSION_INFO;
+    platformID:=wv.dwPlatformId;
+    isServerR2:=GetSystemMetrics(SM_SERVERR2)<>0;
+    isVerSuiteWHServer:=(wv.wSuiteMask and VER_SUITE_WH_SERVER)<>0;
+    isNTWorkstation:=wv.wProductType=VER_NT_WORKSTATION;
+    isAMD64:=PROCESSOR_ARCHITECTURE=archAMD64;
+    case majorVersion of
+      5:case minorVersion of
+        0:result:=w2000;
+        1:result:=wXP;
+        2:begin
+          if isServerR2 then
+            result:=wSERVER2003R2
+          else
+          if isNTWorkstation and isAMD64 then
+            result:=wXP64
+          else
+          if isVerSuiteWHServer then
+            result:=wHOMESERVER
+          else
+          if not isServerR2 then
+            result:=wSERVER2003
+        end;
+      end;
+      6:case minorVersion of
+        0:
+          if isNTWorkstation then
+            result:=wVista
+          else
+            result:=wSERVER2008;
+        1:
+          if isNTWorkstation then
+            result:=w7
+          else
+            result:=wSERVER2008R2;
+        2:
+          if isNTWorkstation then
+            result:=w8
+          else
+            result:=wSERVER2012;
       end;
     end;
-    6:case minorVersion of
-      0:
-        if isNTWorkstation then
-          result:=wVista
-        else
-          result:=wSERVER2008;
-      1:
-        if isNTWorkstation then
-          result:=w7
-        else
-          result:=wSERVER2008R2;
-      2:
-        if isNTWorkstation then
-          result:=w8
-        else
-          result:=wSERVER2012;
-      3:
-        if isNTWorkstation then
-          result:=w8_1
-        else
-          result:=wSERVER2012R2;
-    end else result:=WindowsEdition(0){outro Windows};
   end;
 end;
 
@@ -730,9 +725,7 @@ var
 initialization
   consoleVisible:=isConsole;
   RunAsync(SetStdOutputFile);
-//  while not StdOutputFileOK do; //descomente se você quiser que o fluxo aguarde
-                                  //a saída padrão StdOutput (System.Output) ser redirecionada
-                                  //isto é, reconfigurada (no caso de não estarmos rodando em modo Console, {APPTYPE Console})
+  sleep(100);
 
   //verifica o diretório (chave) do software no registro do Windows
   //e o arquivo de log da aplicação
