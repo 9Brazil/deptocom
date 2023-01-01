@@ -42,6 +42,15 @@ const
   //LOG START OF MESSAGE
   LSTX='#';
 
+  //PROCESSOR ARCHITECTURES
+  //v. https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
+  PROCESSOR_ARCHITECTURE_INTEL    =0;     //x86
+  PROCESSOR_ARCHITECTURE_ARM      =5;     //ARM
+  PROCESSOR_ARCHITECTURE_IA64     =6;     //Intel Itanium-based
+  PROCESSOR_ARCHITECTURE_AMD64    =9;     //x64 (AMD or Intel)
+  PROCESSOR_ARCHITECTURE_ARM64    =12;    //ARM64
+  PROCESSOR_ARCHITECTURE_UNKNOWN  =$ffff; //Unknown architecture.
+
 type
   float=single;
   int8=shortint;
@@ -62,31 +71,13 @@ type
     sidAppData=CSIDL_APPDATA
   );
 
-  WindowsEdition = (
-    w3_x=3,
-    w95,
-    w98,
-    wNT4,
-    wME,
-    w2000,
-    wXP,
-    wXP64,
-    wSERVER2003,
-    wHOMESERVER,
-    wSERVER2003R2,
-    wVISTA,
-    wSERVER2008,
-    wSERVER2008R2,
-    w7,
-    wSERVER2012,
-    w8,
-    wSERVER2012R2,
-    w8_1,
-    wSERVER2016,
-    wSERVER2019,
-    wSERVER2022,
-    w10,
-    w11
+  ProcessorArchitecture = (
+    archAMD64=PROCESSOR_ARCHITECTURE_AMD64,
+    archARM=PROCESSOR_ARCHITECTURE_ARM,
+    archARM64=PROCESSOR_ARCHITECTURE_ARM64,
+    archIA64=PROCESSOR_ARCHITECTURE_IA64,
+    archIntel=PROCESSOR_ARCHITECTURE_INTEL,
+    archUnknown=PROCESSOR_ARCHITECTURE_UNKNOWN
   );
 
   _OSVERSIONINFOA = record
@@ -108,17 +99,29 @@ type
   TOSVersionInfo = TOSVersionInfoA;
   OSVERSIONINFOA = _OSVERSIONINFOA;
 
+  WindowsEdition = (
+    w2000=5,
+    wXP,
+    wXP64,
+    wSERVER2003,
+    wHOMESERVER,
+    wSERVER2003R2,
+    wVISTA,
+    wSERVER2008,
+    wSERVER2008R2,
+    w7,
+    wSERVER2012,
+    w8,
+    wSERVER2012R2,
+    w8_1
+  );
+
 const
   LogLevelFlag:array[llFatal..llDebug] of char = (LL_FTL,LL_ERR,LL_WRN,LL_INF,LL_DBG);
   LogLevelLabel:array[llFatal..llDebug] of string = ('FATAL','ERROR','WARNING','INFO','DEBUG');
 
   //v. https://learn.microsoft.com/en-us/windows/win32/sysinfo/operating-system-version
   WindowsEditionName:array[low(WindowsEdition)..high(WindowsEdition)] of string = (
-    'Windows 3.x',
-    'Windows 95',
-    'Windows 98',
-    'Windows NT 4.0',
-    'Windows Millennium',
     'Windows 2000',
     'Windows XP',
     'Windows XP x64',
@@ -132,12 +135,7 @@ const
     'Windows Server 2012',
     'Windows 8',
     'Windows Server 2012 R2',
-    'Windows 8.1',
-    'Windows Server 2016',
-    'Windows Server 2019',
-    'Windows Server 2022',
-    'Windows 10',
-    'Windows 11'
+    'Windows 8.1'
   );
 
 function GetUnitName(const o:TObject):shortstring;
@@ -153,6 +151,9 @@ function GetConsoleWindow:HWND; stdcall; external kernel32;
 procedure HideConsole;
 procedure ShowConsole;
 function ConsoleIsVisible:boolean;
+
+function PROCESSOR_ARCHITECTURE:ProcessorArchitecture;
+function NUMBER_OF_PROCESSORS:cardinal;
 
 function GetVersionEx(var lpVersionInformation: TOSVersionInfo): BOOL; stdcall;
   external kernel32 name 'GetVersionExA';
@@ -187,35 +188,6 @@ uses
   Registry,
   threads,
   TypInfo;
-
-const
-  //v. https://learn.microsoft.com/pt-br/windows/win32/api/winuser/nf-winuser-getsystemmetrics
-  //System Metrics
-  SM_TABLETPC     = 86; //Diferente de zero se o sistema operacional atual for o Windows XP Tablet PC Edition ou se o sistema operacional atual for Windows Vista ou Windows 7 e o serviço tablet pc input for iniciado; caso contrário, 0.
-  SM_MEDIACENTER  = 87; //Diferente de zero se o sistema operacional atual for o Windows XP, Media Center Edition, 0 se não for.
-  SM_STARTER      = 88; //Diferente de zero se o sistema operacional atual for Windows 7 Starter Edition, Windows Vista Starter ou Windows XP Starter Edition; caso contrário, 0.
-  SM_SERVERR2     = 89; //O número de build se o sistema for Windows Server 2003 R2; caso contrário, 0.
-
-  //v. https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-osversioninfoexa
-  //wSuiteMask (A bit mask that identifies the product suites available on the system. This member can be a combination of the following values.)
-  VER_SUITE_BACKOFFICE                = $00000004;	//Microsoft BackOffice components are installed.
-  VER_SUITE_BLADE                     = $00000400;	//Windows Server 2003, Web Edition is installed.
-  VER_SUITE_COMPUTE_SERVER            = $00004000;	//Windows Server 2003, Compute Cluster Edition is installed.
-  VER_SUITE_DATACENTER                = $00000080;	//Windows Server 2008 Datacenter, Windows Server 2003, Datacenter Edition, or Windows 2000 Datacenter Server is installed.
-  VER_SUITE_ENTERPRISE                = $00000002;	//Windows Server 2008 Enterprise, Windows Server 2003, Enterprise Edition, or Windows 2000 Advanced Server is installed. Refer to the Remarks section for more information about this bit flag.
-  VER_SUITE_EMBEDDEDNT                = $00000040;	//Windows XP Embedded is installed.
-  VER_SUITE_PERSONAL                  = $00000200;	//Windows Vista Home Premium, Windows Vista Home Basic, or Windows XP Home Edition is installed.
-  VER_SUITE_SINGLEUSERTS              = $00000100;	//Remote Desktop is supported, but only one interactive session is supported. This value is set unless the system is running in application server mode.
-  VER_SUITE_SMALLBUSINESS             = $00000001;	//Microsoft Small Business Server was once installed on the system, but may have been upgraded to another version of Windows. Refer to the Remarks section for more information about this bit flag.
-  VER_SUITE_SMALLBUSINESS_RESTRICTED  = $00000020;	//Microsoft Small Business Server is installed with the restrictive client license in force. Refer to the Remarks section for more information about this bit flag.
-  VER_SUITE_STORAGE_SERVER            = $00002000;	//Windows Storage Server 2003 R2 or Windows Storage Server 2003is installed.
-  VER_SUITE_TERMINAL                  = $00000010;	//Terminal Services is installed. This value is always set. If VER_SUITE_TERMINAL is set but VER_SUITE_SINGLEUSERTS is not set, the system is running in application server mode.
-  VER_SUITE_WH_SERVER                 = $00008000;	//Windows Home Server is installed.
-  VER_SUITE_MULTIUSERTS               = $00020000;	//AppServer mode is enabled.
-  //wProductType (Any additional information about the system. This member can be one of the following values.)
-  VER_NT_DOMAIN_CONTROLLER  = $0000002;	//The system is a domain controller and the operating system is Windows Server 2012 , Windows Server 2008 R2, Windows Server 2008, Windows Server 2003, or Windows 2000 Server.
-  VER_NT_SERVER             = $0000003;	//The operating system is Windows Server 2012, Windows Server 2008 R2, Windows Server 2008, Windows Server 2003, or Windows 2000 Server. Note that a server that is also a domain controller is reported as VER_NT_DOMAIN_CONTROLLER, not VER_NT_SERVER.
-  VER_NT_WORKSTATION        = $0000001;	//The operating system is Windows 8, Windows 7, Windows Vista, Windows XP Professional, Windows XP Home Edition, or Windows 2000 Professional.
 
 var
   _LOGFILENAME,
@@ -376,6 +348,38 @@ begin
   result:=consoleVisible;
 end;
 
+//NÃO FUNCIONA DIREITO! [rodando num Lenovo TS-150, Windows 8.1, i.e., numa plataforma com arquitetura de 64 bits, retornou a arquitetura 0 (Intel, x86)]
+//Será corrigido!
+function PROCESSOR_ARCHITECTURE:ProcessorArchitecture;
+var
+  sysinfo:TSystemInfo;
+begin
+  GetSystemInfo(sysinfo);
+  case sysinfo.wProcessorArchitecture of
+    PROCESSOR_ARCHITECTURE_INTEL:result:=archIntel;
+    PROCESSOR_ARCHITECTURE_ARM:result:=archARM;
+    PROCESSOR_ARCHITECTURE_IA64:result:=archIA64;
+    PROCESSOR_ARCHITECTURE_AMD64:result:=archAMD64;
+    PROCESSOR_ARCHITECTURE_ARM64:result:=archARM64;
+    else result:=archUnknown;
+  end;
+end;
+
+function NUMBER_OF_PROCESSORS:cardinal;
+var
+  sysinfo:TSystemInfo;
+begin
+  GetSystemInfo(sysinfo);
+  result:=sysinfo.dwNumberOfProcessors;
+end;
+
+const
+  SM_SERVERR2 = 89;
+  VER_SUITE_WH_SERVER = $00008000;
+  VER_NT_WORKSTATION = $0000001;
+
+//v. https://learn.microsoft.com/pt-br/windows/win32/api/sysinfoapi/nf-sysinfoapi-getversionexa
+//[NOTA: Há de funcionar apenas para sistemas >= Windows 2000 e <= Windows 8]
 function WINDOWS_VERSION_INFO:TOSVersionInfo;
   function GetOSVersionInfo(out osvi:TOSVersionInfo):boolean;
   begin
@@ -387,14 +391,26 @@ begin
   GetOSVersionInfo(result);
 end;
 
+//v. https://learn.microsoft.com/pt-br/windows/win32/api/sysinfoapi/nf-sysinfoapi-getversion
+//[NOTA: Há de funcionar apenas para sistemas >= Windows 2000 e <= Windows 8]
 function WINDOWS_VERSION:string;
 var
-  wv:TOSVersionInfo;
+  dwVersion,
+  dwMajorVersion,
+  dwMinorVersion,
+  dwBuild
+    :DWORD;
 begin
-  wv:=WINDOWS_VERSION_INFO;
-  result:='Microsoft Windows versão '+intToStr(wv.dwMajorVersion)+'.'+intToStr(wv.dwMinorVersion)+'.'+intToStr(wv.dwBuildNumber);
+  dwVersion:=GetVersion;
+  dwMajorVersion:=DWORD(LOBYTE(LOWORD(dwVersion)));
+  dwMinorVersion:=DWORD(HIBYTE(LOWORD(dwVersion)));
+  dwBuild:=0;
+  if dwVersion<$80000000 then
+    dwBuild:=DWORD(HIWORD(dwVersion));
+  result:=format('%d.%d.%d',[dwMajorVersion,dwMinorVersion,dwBuild]);
 end;
 
+//[NOTA: Há de funcionar apenas para sistemas >= Windows 2000 e <= Windows 8]
 function WINDOWS_EDITION:WindowsEdition;
 var
   wv:TOSVersionInfo;
@@ -415,18 +431,8 @@ begin
   isServerR2:=GetSystemMetrics(SM_SERVERR2)<>0;
   isVerSuiteWHServer:=(wv.wSuiteMask and VER_SUITE_WH_SERVER)<>0;
   isNTWorkstation:=wv.wProductType=VER_NT_WORKSTATION;
+  isAMD64:=PROCESSOR_ARCHITECTURE=archAMD64;
   case majorVersion of
-    3:result:=w3_x;
-    4:case minorVersion of
-      0:begin
-        if platformID=VER_PLATFORM_WIN32_NT then
-          result:=wNT4
-        else
-          result:=w95;
-      end;
-      10:result:=w98;
-      90:result:=wME;
-    end;
     5:case minorVersion of
       0:result:=w2000;
       1:result:=wXP;
@@ -445,22 +451,27 @@ begin
       end;
     end;
     6:case minorVersion of
-      0:begin
-
-      end;
-      1:begin
-
-      end;
-      2:begin
-
-      end;
-      3:begin
-
-      end;
-    end;
-    10:begin
-
-    end else result:=WindowsEdition(0){Windows desconhecido};
+      0:
+        if isNTWorkstation then
+          result:=wVista
+        else
+          result:=wSERVER2008;
+      1:
+        if isNTWorkstation then
+          result:=w7
+        else
+          result:=wSERVER2008R2;
+      2:
+        if isNTWorkstation then
+          result:=w8
+        else
+          result:=wSERVER2012;
+      3:
+        if isNTWorkstation then
+          result:=w8_1
+        else
+          result:=wSERVER2012R2;
+    end else result:=WindowsEdition(0){outro Windows};
   end;
 end;
 
