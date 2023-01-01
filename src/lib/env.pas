@@ -152,12 +152,16 @@ procedure HideConsole;
 procedure ShowConsole;
 function ConsoleIsVisible:boolean;
 
+procedure GetNativeSystemInfo(var lpSystemInformation: TSystemInfo); stdcall;
 function PROCESSOR_ARCHITECTURE:ProcessorArchitecture;
 function NUMBER_OF_PROCESSORS:cardinal;
 
 function GetVersionEx(var lpVersionInformation: TOSVersionInfo): BOOL; stdcall;
   external kernel32 name 'GetVersionExA';
 function WINDOWS_VERSION_INFO:TOSVersionInfo;
+function WINDOWS_MAJOR_VERSION:cardinal;
+function WINDOWS_MINOR_VERSION:cardinal;
+function WINDOWS_BUILD_NUMBER:cardinal;
 function WINDOWS_VERSION:string;
 function WINDOWS_EDITION:WindowsEdition;
 
@@ -348,13 +352,28 @@ begin
   result:=consoleVisible;
 end;
 
-//NÃO FUNCIONA DIREITO! [rodando num Lenovo TS-150, Windows 8.1, i.e., numa plataforma com arquitetura de 64 bits, retornou a arquitetura 0 (Intel, x86)]
-//Será corrigido!
+procedure GetNativeSystemInfo; stdcall;
+  external kernel32 name 'GetNativeSystemInfo';
+
 function PROCESSOR_ARCHITECTURE:ProcessorArchitecture;
 var
   sysinfo:TSystemInfo;
+  majorVersion,
+  minorVersion
+    :cardinal;
 begin
-  GetSystemInfo(sysinfo);
+  majorVersion:=WINDOWS_MAJOR_VERSION;
+  minorVersion:=WINDOWS_MINOR_VERSION;
+
+  if majorVersion<=4 then
+    sysinfo.wProcessorArchitecture:=PROCESSOR_ARCHITECTURE_UNKNOWN//corrigir!
+  else
+  if (majorVersion=5) and (minorVersion=0) {Windows 2000} then
+    GetSystemInfo(sysinfo)
+  else
+  if (majorVersion > 5) or ((majorVersion=5) AND (minorVersion>0)) then
+    GetNativeSystemInfo(sysinfo);
+
   case sysinfo.wProcessorArchitecture of
     PROCESSOR_ARCHITECTURE_INTEL:result:=archIntel;
     PROCESSOR_ARCHITECTURE_ARM:result:=archARM;
@@ -378,6 +397,14 @@ const
   VER_SUITE_WH_SERVER = $00008000;
   VER_NT_WORKSTATION = $0000001;
 
+var
+  dwVersion
+    :DWORD=0;
+  dwMajorVersion,
+  dwMinorVersion,
+  dwBuild
+    :DWORD;
+
 //v. https://learn.microsoft.com/pt-br/windows/win32/api/sysinfoapi/nf-sysinfoapi-getversionexa
 //[NOTA: Há de funcionar apenas para sistemas >= Windows 2000 e <= Windows 8]
 function WINDOWS_VERSION_INFO:TOSVersionInfo;
@@ -391,22 +418,39 @@ begin
   GetOSVersionInfo(result);
 end;
 
+function WINDOWS_MAJOR_VERSION:cardinal;
+begin
+  if dwVersion=0 then
+    WINDOWS_VERSION;
+  result:=dwMajorVersion;
+end;
+
+function WINDOWS_MINOR_VERSION:cardinal;
+begin
+  if dwVersion=0 then
+    WINDOWS_VERSION;
+  result:=dwMinorVersion;
+end;
+
+function WINDOWS_BUILD_NUMBER:cardinal;
+begin
+  if dwVersion=0 then
+    WINDOWS_VERSION;
+  result:=dwBuild;
+end;
+
 //v. https://learn.microsoft.com/pt-br/windows/win32/api/sysinfoapi/nf-sysinfoapi-getversion
 //[NOTA: Há de funcionar apenas para sistemas >= Windows 2000 e <= Windows 8]
 function WINDOWS_VERSION:string;
-var
-  dwVersion,
-  dwMajorVersion,
-  dwMinorVersion,
-  dwBuild
-    :DWORD;
 begin
-  dwVersion:=GetVersion;
-  dwMajorVersion:=DWORD(LOBYTE(LOWORD(dwVersion)));
-  dwMinorVersion:=DWORD(HIBYTE(LOWORD(dwVersion)));
-  dwBuild:=0;
-  if dwVersion<$80000000 then
-    dwBuild:=DWORD(HIWORD(dwVersion));
+  if dwVersion=0 then begin
+    dwVersion:=GetVersion;
+    dwMajorVersion:=DWORD(LOBYTE(LOWORD(dwVersion)));
+    dwMinorVersion:=DWORD(HIBYTE(LOWORD(dwVersion)));
+    dwBuild:=0;
+    if dwVersion<$80000000 then
+      dwBuild:=DWORD(HIWORD(dwVersion));
+  end;
   result:=format('%d.%d.%d',[dwMajorVersion,dwMinorVersion,dwBuild]);
 end;
 
