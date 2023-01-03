@@ -751,7 +751,7 @@ initialization
       Append(logfile)
     else
       Rewrite(logfile);
-    write(logfile);//dummy test
+    Write(logfile);//dummy test
     logfileOK:=TRUE;
     errcode:=0;
     //ARQUIVO DE LOG OK!

@@ -55,6 +55,7 @@ type
   public
     constructor Create(parent:Container=NIL);virtual;
     destructor Destroy;override;
+    function Equals(obj:TObject):boolean;    
     procedure SetSize(const x,y,width,height:int32);
     property ID:cardinal read fID;
     property Parent:Container read fParent;
@@ -153,6 +154,14 @@ begin
   fVisible:=FALSE;
   fParent:=NIL;
   inherited Destroy;
+end;
+
+function Component.Equals(obj:TObject):boolean;
+begin
+  if (obj=NIL) or (obj.ClassType<>self.ClassType) then
+    result:=FALSE
+  else
+    result:=Component(obj).ID=Component(self).ID;
 end;
 
 procedure Component.SetEnabled(isEnabled:boolean);
