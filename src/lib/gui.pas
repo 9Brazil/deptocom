@@ -16,6 +16,16 @@ const
   DEFAULT_WINDOW_HEIGHT=200;
 
 type
+  GDIObject=class(TObject);
+
+  Font=class(GDIObject)
+  private
+    fHndl:HFONT;
+    fLF:TLogFont;
+  public
+  
+  end;
+
   WindowState=(wsNormal, wsMinimized, wsMaximized);
 
   Container=class;
@@ -41,13 +51,12 @@ type
     procedure SetHeight(const height:int32);
   protected
     procedure SetEnabled(isEnabled:boolean); virtual;
-    procedure _WM_PAINT(var g:TCanvas);virtual;
+    procedure Paint(var g:TCanvas);virtual;
   public
     constructor Create(parent:Container=NIL);virtual;
     destructor Destroy;override;
     procedure SetSize(const x,y,width,height:int32);
     property ID:cardinal read fID;
-    property Handle:HWND read fHandle;
     property Parent:Container read fParent;
     property Enabled:boolean read fEnabled write setEnabled;
     property Visible:boolean read fVisible write setVisible;
@@ -72,7 +81,7 @@ type
     fWndClass:TWndClass;
     fWindowState:WindowState;
   protected
-    procedure _WM_PAINT(var g:TCanvas);override;
+    procedure Paint(var g:TCanvas);override;
   public
     constructor Create(parent:Window=NIL);
   end;
@@ -200,7 +209,7 @@ begin
   _SetSize(fLeft,fTop,fWidth,height);
 end;
 
-procedure Component._WM_PAINT(var g:TCanvas);
+procedure Component.Paint(var g:TCanvas);
 begin
   //NADA!
 end;
@@ -209,7 +218,7 @@ procedure Container.SetCaption(const newCaption:PAnsiChar);
 begin
   if (fHandle<>0) and (fHandle<>INVALID_HANDLE_VALUE) and (newCaption<>self.fCaption) then
   begin
-    SetWindowText(self.Handle,newCaption);
+    SetWindowText(self.fHandle,newCaption);
     fCaption:=newCaption;
   end;
 end;
@@ -229,7 +238,7 @@ function WindowProc(hndl: HWND; uMsg: UINT; wParam: WPARAM; lParam: LPARAM):
   LRESULT; stdcall;
 var
   _component:Component;
-  _canvas:TCanvas;
+  _g:TCanvas;
   wParamLWord,
   wParamHWord,
   lParamLWord,
@@ -247,17 +256,17 @@ begin
 
   case uMsg of
     WM_DESTROY:
-      if hndl=mainWindowHandle then//apenas o fechamento da janela principal pode encerrar a aplicação!
+      if hndl=mainWindowHandle then //apenas o fechamento da janela principal pode encerrar a aplicação!
         PostQuitMessage(0);
 
     WM_PAINT:begin
       _component:=getComponent(hndl); //obtemos o componente destinatário da mensagem
       if _component<>NIL then begin   //e delegamos um canvas para a procedure _WM_PAINT do componente
-        _canvas:=TCanvas.Create;      //para que ela faça o trabalho
-        _canvas.handle:=GetDC(hndl);
-        _component._WM_PAINT(_canvas);
-        ReleaseDC(hndl,_canvas.handle);
-        _canvas.Free;//NÃO LIBERE O CANVAS NA PROCEDURE _WM_PAINT!
+        _g:=TCanvas.Create;           //para que ela faça o trabalho
+        _g.handle:=GetDC(hndl);
+        _component.Paint(_g);
+        ReleaseDC(hndl,_g.handle);
+        _g.Free;  //NÃO LIBERE O CANVAS NA PROCEDURE _WM_PAINT!
       end;//end-if
     end;//case:WM_PAINT
 
@@ -335,7 +344,7 @@ begin
     parentHandle:=0;
   end else begin
     styleFlags:=WS_OVERLAPPEDWINDOW or WS_CHILD;
-    parentHandle:=parent.Handle;
+    parentHandle:=parent.fHandle;
   end;
 
   fLeft:=DEFAULT_WINDOW_X;
@@ -362,11 +371,11 @@ begin
   hWndIdMap.Add(IntToStr(fHandle)+'='+IntToStr(fID));
 end;
 
-procedure Window._WM_PAINT(var g:TCanvas);
+procedure Window.Paint(var g:TCanvas);
 var
   _rect:TRect;
 begin
-  inherited _WM_PAINT(g);
+  inherited Paint(g);
   _rect.Left:=50;
   _rect.Top:=50;
   _rect.Bottom:=150;
@@ -388,7 +397,7 @@ begin
     parentHandle:=0;
     fParent:=NIL;
   end else begin
-    parentHandle:=parent.Handle;
+    parentHandle:=parent.fHandle;
     fParent:=parent;
   end;
   fHandle:=CreateWindowEx(WS_EX_CLIENTEDGE, // Extended style
@@ -430,7 +439,7 @@ begin
     parentHandle:=0;
     fParent:=NIL;
   end else begin
-    parentHandle:=parent.Handle;
+    parentHandle:=parent.fHandle;
     fParent:=parent;
   end;
   fHandle:=CreateWindow('BUTTON', // BUTTON creates an button, obviously
@@ -472,7 +481,7 @@ begin
     raise Exception.Create('Já há uma MainWindow definida. Não é possível redefiní-la.');
   if mw<>NIL then begin
     fMainWindow:=mw;
-    mainWindowHandle:=mw.Handle;
+    mainWindowHandle:=mw.fHandle;
   end;
 end;
 

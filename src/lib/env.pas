@@ -43,12 +43,12 @@ const
 
   //PROCESSOR ARCHITECTURES
   //v. https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
-  PROCESSOR_ARCHITECTURE_INTEL    =0;     //x86
-  PROCESSOR_ARCHITECTURE_ARM      =5;     //ARM
-  PROCESSOR_ARCHITECTURE_IA64     =6;     //Intel Itanium-based
-  PROCESSOR_ARCHITECTURE_AMD64    =9;     //x64 (AMD or Intel)
-  PROCESSOR_ARCHITECTURE_ARM64    =12;    //ARM64
-  PROCESSOR_ARCHITECTURE_UNKNOWN  =$ffff; //Unknown architecture.
+  PROCESSOR_ARCHITECTURE_INTEL    = 0;     //x86
+  PROCESSOR_ARCHITECTURE_ARM      = 5;     //ARM
+  PROCESSOR_ARCHITECTURE_IA64     = 6;     //Intel Itanium-based
+  PROCESSOR_ARCHITECTURE_AMD64    = 9;     //x64 (AMD or Intel)
+  PROCESSOR_ARCHITECTURE_ARM64    = 12;    //ARM64
+  PROCESSOR_ARCHITECTURE_UNKNOWN  = $ffff; //Unknown architecture.
 
 type
   float=single;
@@ -205,8 +205,12 @@ var
     :boolean=FALSE;
   StdOutputFileOK
     :boolean=FALSE;
-  unitInitializationOK
-    :boolean=FALSE;
+
+procedure OutputWriteLn(const arg:string);
+begin
+  if (isConsole and consoleVisible) or ((not isConsole) and StdOutputFileOK) then
+    WriteLn(arg);
+end;
 
 function GetUnitName(const o:TObject):shortstring;
 var
@@ -283,14 +287,11 @@ begin
     finally
       reg.Free;
     end;
-  except on e:Exception do begin
-      if unitInitializationOK then
+  except
+    on e:Exception do
+      if logFileOK then
         LogError(e)
-      else
-      if unitInitializationOK and isConsole and consoleVisible then
-        Writeln(SOFTWARE_NAME+': env.QueryRegistryValue: '+e.Classname+': '+e.message)
-      else raise e;
-    end;
+      else OutputWriteLn(SOFTWARE_NAME+': env.QueryRegistryValue: '+e.Classname+': '+e.message);
   end;
 end;
 
@@ -310,14 +311,11 @@ begin
     finally
       reg.Free;
     end;
-  except on e:Exception do begin
-      if unitInitializationOK then
+  except
+    on e:Exception do
+      if logFileOK then
         LogError(e)
-      else
-      if unitInitializationOK and isConsole and consoleVisible then
-        Writeln(SOFTWARE_NAME+': env.SetRegistryValue: '+e.Classname+': '+e.message)
-      else raise e;
-    end;
+      else OutputWriteln(SOFTWARE_NAME+': env.SetRegistryValue: '+e.Classname+': '+e.message);
   end;
 end;
 
@@ -708,12 +706,6 @@ begin
   StdOutputFileOK:=FALSE;
 end;
 
-procedure OutputWriteLn(const arg:string);
-begin
-  if (isConsole and consoleVisible) or ((not isConsole) and StdOutputFileOK) then
-    WriteLn(arg);
-end;
-
 var
   straux
     :ansistring='';
@@ -725,7 +717,7 @@ var
 initialization
   consoleVisible:=isConsole;
   RunAsync(SetStdOutputFile);
-  sleep(100);
+  Sleep(100);
 
   //verifica o diretório (chave) do software no registro do Windows
   //e o arquivo de log da aplicação
@@ -858,7 +850,6 @@ initialization
   straux:='';
   errcode:=0;
   folderOK:=FALSE;
-  unitInitializationOK:=TRUE;
 finalization
   if logfileOK then
     CloseFile(logfile);

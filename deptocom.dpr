@@ -5,7 +5,8 @@ program deptocom;
 uses
   env in 'src\lib\env.pas',
   gui in 'src\lib\gui.pas',
-  threads in 'src\lib\threads.pas';
+  threads in 'src\lib\threads.pas',
+  geom in 'src\lib\geom.pas';
 
 var
   mainWindow:Window;
