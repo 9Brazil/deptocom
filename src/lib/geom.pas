@@ -3,8 +3,6 @@ unit geom;
 interface
 
 uses
-  Windows,
-
   Types;
 
 type
@@ -29,6 +27,7 @@ type
     constructor Create(const d:Dimension2D);overload;
     function Equals(obj:TObject):boolean;
     function ToString:string;
+    function Clone:Dimension2D;    
     property Width:longint read fSize.cx write fSize.cx;
     property Height:longint read fSize.cy write fSize.cy;
     property Value:tagSIZE read fSize;
@@ -45,6 +44,7 @@ type
     constructor Create(const p:Point2D);overload;
     function Equals(obj:TObject):boolean;
     function ToString:string;
+    function Clone:Point2D;
     property X:longint read fPoint.X write fPoint.X;
     property Y:longint read fPoint.Y write fPoint.Y;
     property Value:tagPoint read fPoint;
@@ -52,6 +52,8 @@ type
     procedure MoveTo(const p:Point2D);overload;
     procedure Translate(const dx,dy:longint);overload;
     procedure Translate(const d:Dimension2D);overload;
+    class function DistanceSq(const p1,p2:Point2D):extended;overload;
+    function DistanceSq(const p:Point2D):extended;overload;
     class function Distance(const p1,p2:Point2D):extended;overload;
     function Distance(const p:Point2D):extended;overload;
   end;
@@ -65,6 +67,8 @@ type
     function GetBottomRight:Point2D;
     function GetSize:Dimension2D;
     function GetDiagonalLength:extended;
+    function GetPerimeter:extended;
+    function GetArea:extended;
     function IsEmpty:boolean;
     function IsSquare:boolean;
   public
@@ -75,8 +79,13 @@ type
     constructor Create(const cx,cy:longint);overload;
     constructor Create(const size:Dimension2D);overload;
     constructor Create(const p:Point2D);overload;
+    constructor Create(const r:Rectangle);overload;
+    constructor CreateSquare(const size:longint);overload;
+    constructor CreateSquare(const x,y,size:longint);overload;
+    constructor CreateSquare(const p:Point2D; const size:longint);overload;
     function Equals(obj:TObject):boolean;
     function ToString:string;
+    function Clone:Rectangle;
     property Top:longint read fRect.top;
     property Left:longint read fRect.left;
     property Bottom:longint read fRect.bottom;
@@ -88,6 +97,8 @@ type
     property Value:tagRECT read fRect;
     property Size:Dimension2D read GetSize;
     property DiagonalLength:extended read GetDiagonalLength;
+    property Perimeter:extended read GetPerimeter;
+    property Area:extended read GetArea;
     function HasWidth:boolean;
     function HasHeight:boolean;
     property Empty:boolean read IsEmpty;
@@ -173,6 +184,11 @@ begin
   result:='geom.Dimension2D'+SizeToString(self.fSize);
 end;
 
+function Dimension2D.Clone:Dimension2D;
+begin
+  result:=Dimension2D.Create(self);
+end;
+
 procedure Dimension2D.Resize(const newWidth,newHeight:integer);
 begin
   self.fSize.cx:=newWidth;
@@ -227,6 +243,11 @@ begin
   result:='geom.Point2D'+PointToString(self.fPoint);
 end;
 
+function Point2D.Clone:Point2D;
+begin
+  result:=Point2D.Create(self);
+end;
+
 procedure Point2D.MoveTo(const x,y:longint);
 begin
   self.fPoint.X:=x;
@@ -257,9 +278,20 @@ begin
   self.fPoint.Y:=self.fPoint.Y+d.fSize.cy;
 end;
 
+
+class function Point2D.DistanceSq(const p1,p2:Point2D):extended;
+begin
+  result:=(p2.fPoint.X-p1.fPoint.X)*(p2.fPoint.X-p1.fPoint.X) + (p2.fPoint.Y-p1.fPoint.Y)*(p2.fPoint.Y-p1.fPoint.Y);
+end;
+
+function Point2D.DistanceSq(const p:Point2D):extended;
+begin
+  result:=Point2D.DistanceSq(self,p);
+end;
+
 class function Point2D.Distance(const p1,p2:Point2D):extended;
 begin
-  result:=Sqrt((p2.fPoint.X-p1.fPoint.X)*(p2.fPoint.X-p1.fPoint.X) + (p2.fPoint.Y-p1.fPoint.Y)*(p2.fPoint.Y-p1.fPoint.Y));
+  result:=Sqrt(Point2D.DistanceSq(p1,p2));
 end;
 
 function Point2D.Distance(const p:Point2D):extended;
@@ -324,6 +356,32 @@ begin
   Create(p,Dimension2D.Create(0,0));
 end;
 
+constructor Rectangle.Create(const r:Rectangle);
+begin
+  if r=NIL then
+    raise Exception.Create('geom.Rectangle.Create(Rectangle): Nil pointer');
+
+  Create(r.TopLeft,r.BottomRight);
+end;
+
+constructor Rectangle.CreateSquare(const size:longint);
+begin
+  Create(0,0,size,size);
+end;
+
+constructor Rectangle.CreateSquare(const x,y,size:longint);
+begin
+  Create(x,y,x+size,y+size);
+end;
+
+constructor Rectangle.CreateSquare(const p:Point2D; const size:longint);
+begin
+  if p=NIL then
+    raise Exception.Create('geom.Rectangle.CreateSquare(Point2D,longint): Nil pointer');
+
+  CreateSquare(p.fPoint.X,p.fPoint.Y,size);
+end;
+
 function Rectangle.Equals(obj:TObject):boolean;
 begin
   if obj=NIL then
@@ -338,6 +396,11 @@ end;
 function Rectangle.ToString:string;
 begin
   result:='geom.Rectangle'+RectToString(self.fRect);
+end;
+
+function Rectangle.Clone:Rectangle;
+begin
+  result:=Rectangle.Create(self);
 end;
 
 function Rectangle.GetTopLeft:Point2D;
@@ -368,6 +431,16 @@ end;
 function Rectangle.GetDiagonalLength:extended;
 begin
   result:=Point2D.Distance(TopLeft,BottomRight);
+end;
+
+function Rectangle.GetPerimeter:extended;
+begin
+  result:=2*self.Size.Width+2*self.Size.Height;
+end;
+
+function Rectangle.GetArea:extended;
+begin
+  result:=self.Size.Width*self.Size.Height;
 end;
 
 function Rectangle.HasWidth:boolean;

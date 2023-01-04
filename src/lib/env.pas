@@ -22,7 +22,7 @@ const
   DATA_FOLDER_NAME='data';//default
   TABLE_SUFFIX='.dat';//default
   HISTORY_TABLE_SUFFIX='.h.dat';//default
-  LOGIN_TABLE='login.dat';//default
+  LOGIN_TABLE='usr.dat';//default
 
   //CUSTOM RUNTIME ERROR CODES
   RUNERR_NO_SOFTWARE_REGISTRYKEY  = 51;
@@ -99,7 +99,11 @@ type
   OSVERSIONINFOA = _OSVERSIONINFOA;
 
   WindowsEdition = (
-    w2000=5,
+    w95=4,
+    wNT4,
+    w98,
+    w2000,
+    wME,
     wXP,
     wXP64,
     wSERVER2003,
@@ -119,7 +123,11 @@ const
 
   //v. https://learn.microsoft.com/en-us/windows/win32/sysinfo/operating-system-version
   WindowsEditionName:array[low(WindowsEdition)..high(WindowsEdition)] of string = (
-    'Windows 2000',
+    'Windows 95',
+    'Windows NT 4.0',
+    'Windows 98',
+    'Windows 2000',    
+    'Windows Millennium',
     'Windows XP',
     'Windows XP x64',
     'Windows Server 2003',
@@ -466,6 +474,12 @@ begin
   minorVersion:=dwMinorVersion;
 
   result:=WindowsEdition(0);
+  if majorVersion=4 then begin
+    case minorVersion of
+      10:result:=w98;
+      90:result:=wME;
+    end;
+  end else
   if (majorVersion=5) or ((majorVersion=6) and (minorVersion<3)) then begin
     wv:=WINDOWS_VERSION_INFO;
     platformID:=wv.dwPlatformId;
