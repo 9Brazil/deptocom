@@ -5,6 +5,21 @@ interface
 uses
   Types;
 
+const
+  NOWHERE     = 0;
+  INSIDE      = 1;
+  OUTSIDE     = 2;
+  LEFTSIDE    = 4;
+  TOPSIDE     = 8;
+  RIGHTSIDE   = 16;
+  BOTTOMSIDE  = 32;
+  BOUNDARY    = LEFTSIDE or TOPSIDE or RIGHTSIDE or BOTTOMSIDE;
+
+  OUT_LEFT    = 1;
+  OUT_TOP     = 2;
+  OUT_RIGHT   = 4;
+  OUT_BOTTOM  = 8;
+
 type
   //v. https://learn.microsoft.com/pt-br/windows/win32/api/windef/ns-windef-rect
   tagRECT=packed record
@@ -27,7 +42,7 @@ type
     constructor Create(const d:Dimension2D);overload;
     function Equals(obj:TObject):boolean;
     function ToString:string;
-    function Clone:Dimension2D;    
+    function Clone:Dimension2D;
     property Width:longint read fSize.cx write fSize.cx;
     property Height:longint read fSize.cy write fSize.cy;
     property Value:tagSIZE read fSize;
@@ -111,6 +126,12 @@ type
     procedure MoveTo(const p:Point2D);overload;
     function PtInRect(const p:Point2D):boolean;overload;//v. https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-ptinrect
     function PtInRect(const x,y:integer):boolean;overload;
+    function WhereIs(const x,y:longint):integer;overload;
+    function WhereIs(const p:Point2D):integer;overload;
+    function Outcode(const x,y:longint):integer;overload;
+    function Outcode(const p:Point2D):integer;overload;
+    function IsVertex(const p:Point2D):boolean;overload;
+    function IsVertex(const x,y:longint):boolean;overload;
   end;
 
 function SizeToString(const size:tagSIZE):string;
@@ -530,7 +551,98 @@ begin
   if p=NIL then
     raise Exception.Create('geom.Rectangle.PtInRect(Point2D): Nil pointer');
 
-  self.PtInRect(p.X,p.Y);
+  result:=self.PtInRect(p.X,p.Y);
+end;
+
+function Rectangle.WhereIs(const x,y:longint):integer;
+begin
+  result:=NOWHERE;
+  if
+    (x>self.fRect.left)
+    and
+    (x<self.fRect.right)
+    and
+    (y>self.fRect.top)
+    and
+    (y<self.fRect.bottom)
+  then
+    result:=INSIDE
+  else
+  if
+    (x<self.fRect.left)
+    or
+    (x>self.fRect.right)
+    or
+    (y<self.fRect.top)
+    or
+    (y>self.fRect.bottom)
+  then
+    result:=OUTSIDE
+  else begin//the point (x,y) is in the boundary (LEFTSIDE U TOPSIDE U RIGHTSIDE U BOTTOMSIDE)
+    if (x=self.fRect.left) and (y>=self.fRect.top) and (y<=self.fRect.bottom) then
+      result:=result or LEFTSIDE;
+    if (x>=self.fRect.left) and (x<=self.fRect.right) and (y=self.fRect.top) then
+      result:=result or TOPSIDE;
+    if (x=self.fRect.right) and (y>=self.fRect.top) and (y<=self.fRect.bottom) then
+      result:=result or RIGHTSIDE;
+    if (x>=self.fRect.left) and (x<=self.fRect.right) and (y=self.fRect.bottom) then
+      result:=result or BOTTOMSIDE;
+  end;
+end;
+
+function Rectangle.WhereIs(const p:Point2D):integer;
+begin
+  if p=NIL then
+    raise Exception.Create('geom.Rectangle.WhereIs(Point2D): Nil pointer');
+
+  result:=WhereIs(p.X,p.Y);
+end;
+
+function Rectangle.Outcode(const x,y:longint):integer;
+begin
+  //v. https://docs.oracle.com/javase/7/docs/api/java/awt/geom/Rectangle2D.html#outcode(double,%20double)
+  //https://github.com/openjdk-mirror/jdk7u-jdk/blob/master/src/share/classes/java/awt/geom/Rectangle2D.java#L217
+
+  result:=NOWHERE;
+
+  if not self.HasWidth then
+    result:=result or OUT_LEFT or OUT_RIGHT
+  else
+  if x<self.Left then
+    result:=result or OUT_LEFT
+  else
+  if x>self.Right then
+    result:=result or OUT_RIGHT;
+
+  if not self.HasHeight then
+    result:=result or OUT_TOP or OUT_BOTTOM
+  else
+  if y<self.Top then
+    result:=result or OUT_TOP
+  else
+  if y>self.Bottom then
+    result:=result or OUT_BOTTOM;
+end;
+
+function Rectangle.Outcode(const p:Point2D):integer;
+begin
+  if p=NIL then
+    raise Exception.Create('geom.Rectangle.Outcode(Point2D): Nil pointer');
+
+  result:=Outcode(p.X,p.Y);
+end;
+
+function Rectangle.IsVertex(const p:Point2D):boolean;
+begin
+  if p=NIL then
+    raise Exception.Create('geom.Rectangle.IsVertex(Point2D): Nil pointer');
+
+  result:= p.Equals(self.TopLeft) or p.Equals(self.TopRight) or p.Equals(self.BottomRight) or p.Equals(self.BottomLeft);
+end;
+
+function Rectangle.IsVertex(const x,y:longint):boolean;
+begin
+  result:=self.IsVertex(Point2D.Create(x,y));
 end;
 
 end.
