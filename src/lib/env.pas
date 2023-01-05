@@ -168,6 +168,7 @@ function WINDOWS_BUILD_NUMBER:cardinal;
 function WINDOWS_VERSION:string;
 function WINDOWS_EDITION:WindowsEdition;
 
+function NUMBER_OF_DISPLAY_MONITORS:cardinal;
 function SCREEN_SIZE:TSize;
 function OS_USER:ansistring;
 function COMPUTERNAME:ansistring;
@@ -439,15 +440,13 @@ begin
   result:=dwBuild;
 end;
 
-//v. https://learn.microsoft.com/pt-br/windows/win32/api/sysinfoapi/nf-sysinfoapi-getversion
-//[NOTA: Há de funcionar apenas para sistemas >= Windows 2000 e <= Windows 8]
 function WINDOWS_VERSION:string;
 begin
   if dwVersion=0 then begin
     dwMajorVersion:=Win32MajorVersion;
     dwMinorVersion:=Win32MinorVersion;
     dwBuild:=Win32BuildNumber;
-    dwVersion:=GetVersion;
+    dwVersion:=GetVersion;//v. https://learn.microsoft.com/pt-br/windows/win32/api/sysinfoapi/nf-sysinfoapi-getversion
     dwMajorVersion:=DWORD(LOBYTE(LOWORD(dwVersion)));
     dwMinorVersion:=DWORD(HIBYTE(LOWORD(dwVersion)));
     if dwVersion<$80000000 then
@@ -456,7 +455,6 @@ begin
   result:=format('%d.%d.%d',[dwMajorVersion,dwMinorVersion,dwBuild]);
 end;
 
-//[NOTA: Há de funcionar apenas para sistemas >= Windows 2000 e <= Windows 8]
 function WINDOWS_EDITION:WindowsEdition;
 var
   wv:TOSVersionInfo;
@@ -533,6 +531,11 @@ begin
       end;
     end;
   end;
+end;
+
+function NUMBER_OF_DISPLAY_MONITORS:cardinal;
+begin
+  result:=GetSystemMetrics(SM_CMONITORS);
 end;
 
 function SCREEN_SIZE:TSize;
