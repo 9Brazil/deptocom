@@ -450,7 +450,6 @@ begin
     dwVersion:=GetVersion;
     dwMajorVersion:=DWORD(LOBYTE(LOWORD(dwVersion)));
     dwMinorVersion:=DWORD(HIBYTE(LOWORD(dwVersion)));
-    dwBuild:=0;
     if dwVersion<$80000000 then
       dwBuild:=DWORD(HIWORD(dwVersion));
   end;

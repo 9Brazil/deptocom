@@ -476,12 +476,12 @@ end;
 
 function Rectangle.HasWidth:boolean;
 begin
-  result:=not(Left=Right);
+  result:=Left<>Right;
 end;
 
 function Rectangle.HasHeight:boolean;
 begin
-  result:=not(Top=Bottom);
+  result:=Top<>Bottom;
 end;
 
 function Rectangle.IsEmpty:boolean;
