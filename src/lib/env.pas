@@ -234,6 +234,7 @@ begin
   except
     // o<>NIL
     // mas não aponta para um objeto (aponta para uma área de memória inadequada)
+    raise Edeptocom.Create('env.GetUnitName(TObject): invalid pointer');
   end;
 end;
 
@@ -443,6 +444,9 @@ end;
 function WINDOWS_VERSION:string;
 begin
   if dwVersion=0 then begin
+    dwMajorVersion:=Win32MajorVersion;
+    dwMinorVersion:=Win32MinorVersion;
+    dwBuild:=Win32BuildNumber;
     dwVersion:=GetVersion;
     dwMajorVersion:=DWORD(LOBYTE(LOWORD(dwVersion)));
     dwMinorVersion:=DWORD(HIBYTE(LOWORD(dwVersion)));
@@ -472,10 +476,16 @@ begin
 
   majorVersion:=dwMajorVersion;
   minorVersion:=dwMinorVersion;
+  platformID:=Win32Platform;
 
   result:=WindowsEdition(0);
   if majorVersion=4 then begin
     case minorVersion of
+      0:
+        if platformID=VER_PLATFORM_WIN32_NT then
+          result:=wNT4
+        else
+          result:=w95;
       10:result:=w98;
       90:result:=wME;
     end;

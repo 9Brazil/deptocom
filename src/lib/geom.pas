@@ -174,6 +174,9 @@ end;
 
 constructor Dimension2D.Create(const width,height : longint);
 begin
+  if (width or height)<0 then
+    raise Exception.Create('geom.Dimension2D.Create(longint,longint): negative size');
+
   inherited Create;
   self.fSize.cx:=width;
   self.fSize.cy:=height;
@@ -212,6 +215,9 @@ end;
 
 procedure Dimension2D.Resize(const newWidth,newHeight:integer);
 begin
+  if (newWidth or newHeight)<0 then
+    raise Exception.Create('geom.Dimension2D.Resize(integer,integer): negative size');
+
   self.fSize.cx:=newWidth;
   self.fSize.cy:=newHeight;
 end;
@@ -387,11 +393,15 @@ end;
 
 constructor Rectangle.CreateSquare(const size:longint);
 begin
+  if size<0 then
+    raise Exception.Create('geom.Rectangle.CreateSquare(longint): negative size');
   Create(0,0,size,size);
 end;
 
 constructor Rectangle.CreateSquare(const x,y,size:longint);
 begin
+  if size<0 then
+    raise Exception.Create('geom.Rectangle.CreateSquare(longint,longint,longint): negative size');
   Create(x,y,x+size,y+size);
 end;
 
@@ -494,9 +504,10 @@ end;
 
 procedure Rectangle.Resize(const newWidth,newHeight:integer);
 begin
+  if (newWidth or newHeight)<0 then
+    raise Exception.Create('geom.Rectangle.Resize(integer,integer): negative size');
   self.fRect.right:=self.fRect.left+newWidth;
   self.fRect.bottom:=self.fRect.top+newHeight;
-  //não fazemos nenhuma verificação quanto a inversão left-right e top-bottom... use com responsabilidade!
 end;
 
 procedure Rectangle.Resize(const newSize:Dimension2D);
@@ -565,8 +576,8 @@ begin
     (y>self.fRect.top)
     and
     (y<self.fRect.bottom)
-  then
-    result:=INSIDE
+  then//the point (x,y) is inside the region (in the interior)
+    result:=result or INSIDE
   else
   if
     (x<self.fRect.left)
@@ -576,8 +587,8 @@ begin
     (y<self.fRect.top)
     or
     (y>self.fRect.bottom)
-  then
-    result:=OUTSIDE
+  then//the point (x,y) is outside the region (in the exterior)
+    result:=result or OUTSIDE
   else begin//the point (x,y) is in the boundary (LEFTSIDE U TOPSIDE U RIGHTSIDE U BOTTOMSIDE)
     if (x=self.fRect.left) and (y>=self.fRect.top) and (y<=self.fRect.bottom) then
       result:=result or LEFTSIDE;
