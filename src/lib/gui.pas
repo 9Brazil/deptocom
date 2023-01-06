@@ -32,7 +32,7 @@ type
 
   Component=class(TInterfacedObject)
   private
-    fID:cardinal;
+    fId:cardinal;
     fHandle:HWND;
     fVisible,
     fEnabled
@@ -57,7 +57,7 @@ type
     destructor Destroy;override;
     function Equals(obj:TObject):boolean;    
     procedure SetSize(const x,y,width,height:int32);
-    property ID:cardinal read fID;
+    property Id:cardinal read fId;
     property Parent:Container read fParent;
     property Enabled:boolean read fEnabled write setEnabled;
     property Visible:boolean read fVisible write setVisible;
@@ -120,7 +120,7 @@ const
 
 var
   mainWindowHandle:HWND=0;
-  componentID,
+  componentId,
   windowNum
     :cardinal;
 
@@ -141,18 +141,18 @@ begin
   inherited create;
   if parent<>NIL then
     fParent:=parent;
-  inc(componentID);
-  fID:=componentID;
-  SetLength(arrayOfComponents,componentID);
+  Inc(componentId);
+  fId:=componentId;
+  SetLength(arrayOfComponents,componentId);
 end;
 
 destructor Component.Destroy;
 begin
   if (fHandle<>0) and (fHandle<>INVALID_HANDLE_VALUE) then
     DestroyWindow(fHandle);
-  arrayOfComponents[fID-1]:=NIL;
+  arrayOfComponents[fId-1]:=NIL;
   fHandle:=0;
-  fID:=0;
+  fId:=0;
   fLeft:=0;
   fTop:=0;
   fWidth:=0;
@@ -239,7 +239,7 @@ begin
   end;
 end;
 
-function HWndToID(const hWnd:HWND):int32;
+function HWndToId(const hWnd:HWND):int32;
 var
   list:hWndIdList;
   i:integer;
@@ -247,13 +247,13 @@ begin
   list:=hWndIdSlot[hWnd mod 65536];
   i:=0;
   while list[i].hndl<>hWnd do
-    inc(i);
+    Inc(i);
   result:=list[i].id;
 end;
 
 function GetComponent(const hWnd:HWND):Component;
 begin
-  result:=arrayOfComponents[hWndToID(hWnd)-1];
+  result:=arrayOfComponents[hWndToId(hWnd)-1];
 end;
 
 function WindowProc(hndl: HWND; uMsg: UINT; wParam: WPARAM; lParam: LPARAM):
@@ -282,7 +282,7 @@ begin
         PostQuitMessage(0);
 
     WM_PAINT:begin
-      _component:=getComponent(hndl); //obtemos o componente destinatário da mensagem
+      _component:=GetComponent(hndl); //obtemos o componente destinatário da mensagem
       if _component<>NIL then begin   //e delegamos um canvas para a procedure _WM_PAINT do componente
         _g:=TCanvas.Create;           //para que ela faça o trabalho
         _g.handle:=GetDC(hndl);
@@ -390,11 +390,11 @@ begin
     Exit;
   end;
 
-  arrayOfComponents[fID-1]:=self;
+  arrayOfComponents[fId-1]:=self;
   len:=length(hWndIdSlot[fHandle mod 65536])+1;
-  setLength(hWndIdSlot[fHandle mod 65536],len);
+  SetLength(hWndIdSlot[fHandle mod 65536],len);
   hWndIdSlot[fHandle mod 65536][len-1].hndl:=fHandle;
-  hWndIdSlot[fHandle mod 65536][len-1].id:=fID;
+  hWndIdSlot[fHandle mod 65536][len-1].id:=fId;
 end;
 
 procedure Window.Paint(var g:TCanvas);
@@ -442,11 +442,11 @@ begin
     Exit;
   end;
 
-  arrayOfComponents[fID-1]:=self;
+  arrayOfComponents[fId-1]:=self;
   len:=length(hWndIdSlot[fHandle mod 65536])+1;
-  setLength(hWndIdSlot[fHandle mod 65536],len);
+  SetLength(hWndIdSlot[fHandle mod 65536],len);
   hWndIdSlot[fHandle mod 65536][len-1].hndl:=fHandle;
-  hWndIdSlot[fHandle mod 65536][len-1].id:=fID;
+  hWndIdSlot[fHandle mod 65536][len-1].id:=fId;
 
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
@@ -487,11 +487,11 @@ begin
     Exit;
   end;
 
-  arrayOfComponents[fID-1]:=self;
+  arrayOfComponents[fId-1]:=self;
   len:=length(hWndIdSlot[fHandle mod 65536])+1;
-  setLength(hWndIdSlot[fHandle mod 65536],len);
+  SetLength(hWndIdSlot[fHandle mod 65536],len);
   hWndIdSlot[fHandle mod 65536][len-1].hndl:=fHandle;
-  hWndIdSlot[fHandle mod 65536][len-1].id:=fID;
+  hWndIdSlot[fHandle mod 65536][len-1].id:=fId;
 
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
@@ -533,10 +533,10 @@ begin
 end;
 
 initialization
-  componentID:=0;
+  componentId:=0;
   windowNum:=0;
   myApp:=deptocomApp.Create;
 finalization
-  componentID:=0;
+  componentId:=0;
   windowNum:=0;
 end.
