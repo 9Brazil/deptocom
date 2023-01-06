@@ -132,6 +132,8 @@ type
     function Outcode(const p:Point2D):integer;overload;
     function IsVertex(const p:Point2D):boolean;overload;
     function IsVertex(const x,y:longint):boolean;overload;
+    function IntersectRect(const r:Rectangle):Rectangle;
+    function UnionRect(const r:Rectangle):Rectangle;
   end;
 
 function SizeToString(const size:tagSIZE):string;
@@ -143,7 +145,8 @@ implementation
 
 uses
   Math,
-  SysUtils;
+  SysUtils,
+  Windows;
 
 function SizeToString(const size:tagSIZE):string;
 begin
@@ -654,6 +657,24 @@ end;
 function Rectangle.IsVertex(const x,y:longint):boolean;
 begin
   result:=self.IsVertex(Point2D.Create(x,y));
+end;
+
+function Rectangle.IntersectRect(const r:Rectangle):Rectangle;
+begin
+  if r=NIL then
+    raise Exception.Create('geom.Rectangle.IntersectRect(Rectangle): Nil pointer');
+
+  result:=Rectangle.Create;
+  Windows.IntersectRect(TRect(result.fRect),TRect(self.fRect),TRect(r.fRect));
+end;
+
+function Rectangle.UnionRect(const r:Rectangle):Rectangle;
+begin
+  if r=NIL then
+    raise Exception.Create('geom.Rectangle.UnionRect(Rectangle): Nil pointer');
+
+  result:=Rectangle.Create;
+  Windows.UnionRect(TRect(result.fRect),TRect(self.fRect),TRect(r.fRect));
 end;
 
 end.

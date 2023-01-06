@@ -124,10 +124,17 @@ var
   windowNum
     :cardinal;
 
+type
+  hWndId=record
+    hndl:HWND;
+    id:cardinal;
+  end;
+  hWndIdList=array of hWndId;
+
 var
   arrayOfComponents:array of Component; //todo componente criado vem para esse array...
                                         //os que foram liberados da memória marcamos com NIL
-  hWndIdMap:TStringList;                //nosso mapa key-value para hWnd-ID (!precisamos de algo melhor!)
+  hWndIdSlot:array[WORD] of hWndIdList;
 
 constructor Component.Create(parent:Container=NIL);
 begin
@@ -233,9 +240,15 @@ begin
 end;
 
 function HWndToID(const hWnd:HWND):int32;
+var
+  list:hWndIdList;
+  i:integer;
 begin
-  result:=StrToInt(hWndIdMap.Values[IntToStr(hWnd)]); //possivelmente usar TStringList como mapa key-value não é uma boa, mas...
-                                                      //aceite como provisório!
+  list:=hWndIdSlot[hWnd mod 65536];
+  i:=0;
+  while list[i].hndl<>hWnd do
+    inc(i);
+  result:=list[i].id;
 end;
 
 function GetComponent(const hWnd:HWND):Component;
@@ -329,6 +342,7 @@ constructor Window.Create(parent:Window=NIL);
 var
   styleFlags:cardinal;
   parentHandle:HWND;
+  len:integer;
 begin
   inherited Create(parent);
   Inc(windowNum);
@@ -377,7 +391,10 @@ begin
   end;
 
   arrayOfComponents[fID-1]:=self;
-  hWndIdMap.Add(IntToStr(fHandle)+'='+IntToStr(fID));
+  len:=length(hWndIdSlot[fHandle mod 65536])+1;
+  setLength(hWndIdSlot[fHandle mod 65536],len);
+  hWndIdSlot[fHandle mod 65536][len-1].hndl:=fHandle;
+  hWndIdSlot[fHandle mod 65536][len-1].id:=fID;
 end;
 
 procedure Window.Paint(var g:TCanvas);
@@ -400,6 +417,7 @@ var
   hControlFont:HFONT;
   lfControl:TLogFont;
   parentHandle:HWND;
+  len:integer;
 begin
   inherited Create(parent);
   if parent=NIL then begin
@@ -425,7 +443,10 @@ begin
   end;
 
   arrayOfComponents[fID-1]:=self;
-  hWndIdMap.Add(IntToStr(fHandle)+'='+IntToStr(fID));
+  len:=length(hWndIdSlot[fHandle mod 65536])+1;
+  setLength(hWndIdSlot[fHandle mod 65536],len);
+  hWndIdSlot[fHandle mod 65536][len-1].hndl:=fHandle;
+  hWndIdSlot[fHandle mod 65536][len-1].id:=fID;
 
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
@@ -442,6 +463,7 @@ var
   hControlFont:HFONT;
   lfControl:TLogFont;
   parentHandle:HWND;
+  len:integer;
 begin
   inherited Create(parent);
   if parent=NIL then begin
@@ -466,7 +488,10 @@ begin
   end;
 
   arrayOfComponents[fID-1]:=self;
-  hWndIdMap.Add(IntToStr(fHandle)+'='+IntToStr(fID));
+  len:=length(hWndIdSlot[fHandle mod 65536])+1;
+  setLength(hWndIdSlot[fHandle mod 65536],len);
+  hWndIdSlot[fHandle mod 65536][len-1].hndl:=fHandle;
+  hWndIdSlot[fHandle mod 65536][len-1].id:=fID;
 
   // Set up the font
   { Calculate font height from point size - they are not the same thing!
@@ -510,7 +535,6 @@ end;
 initialization
   componentID:=0;
   windowNum:=0;
-  hWndIdMap:=TStringList.Create;
   myApp:=deptocomApp.Create;
 finalization
   componentID:=0;
