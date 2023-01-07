@@ -361,18 +361,12 @@ procedure GetNativeSystemInfo; stdcall;
 function PROCESSOR_ARCHITECTURE:ProcessorArchitecture;
 var
   sysinfo:TSystemInfo;
-  majorVersion,
-  minorVersion
-    :cardinal;
 begin
-  majorVersion:=WINDOWS_MAJOR_VERSION;
-  minorVersion:=WINDOWS_MINOR_VERSION;
-
   sysinfo.wProcessorArchitecture:=PROCESSOR_ARCHITECTURE_UNKNOWN;
-  if (majorVersion=5) and (minorVersion=0) {Windows 2000} then
+  if (Win32MajorVersion=5) and (Win32MinorVersion=0) {Windows 2000} then
     GetSystemInfo(sysinfo)
   else
-  if (majorVersion > 5) or ((majorVersion=5) AND (minorVersion>0)) then
+  if (Win32MajorVersion>5) or ((Win32MajorVersion=5) AND (Win32MinorVersion>0)) then
     GetNativeSystemInfo(sysinfo);
 
   case sysinfo.wProcessorArchitecture of
@@ -399,14 +393,6 @@ const
   VER_SUITE_WH_SERVER = $00008000;
   VER_NT_WORKSTATION = $0000001;
 
-var
-  dwVersion
-    :DWORD=0;
-  dwMajorVersion,
-  dwMinorVersion,
-  dwBuild
-    :DWORD;
-
 //v. https://learn.microsoft.com/pt-br/windows/win32/api/sysinfoapi/nf-sysinfoapi-getversionexa
 //[NOTA: Há de funcionar apenas para sistemas >= Windows 2000 e <= Windows 8]
 function WINDOWS_VERSION_INFO:TOSVersionInfo;
@@ -422,65 +408,38 @@ end;
 
 function WINDOWS_MAJOR_VERSION:cardinal;
 begin
-  if dwVersion=0 then
-    WINDOWS_VERSION;
-  result:=dwMajorVersion;
+  result:=Win32MajorVersion;
 end;
 
 function WINDOWS_MINOR_VERSION:cardinal;
 begin
-  if dwVersion=0 then
-    WINDOWS_VERSION;
-  result:=dwMinorVersion;
+  result:=Win32MinorVersion;
 end;
 
 function WINDOWS_BUILD_NUMBER:cardinal;
 begin
-  if dwVersion=0 then
-    WINDOWS_VERSION;
-  result:=dwBuild;
+  result:=Win32BuildNumber;
 end;
 
 function WINDOWS_VERSION:string;
 begin
-  if dwVersion=0 then begin
-    dwMajorVersion:=Win32MajorVersion;
-    dwMinorVersion:=Win32MinorVersion;
-    dwBuild:=Win32BuildNumber;
-    dwVersion:=GetVersion;//v. https://learn.microsoft.com/pt-br/windows/win32/api/sysinfoapi/nf-sysinfoapi-getversion
-    dwMajorVersion:=DWORD(LOBYTE(LOWORD(dwVersion)));
-    dwMinorVersion:=DWORD(HIBYTE(LOWORD(dwVersion)));
-    if dwVersion<$80000000 then
-      dwBuild:=DWORD(HIWORD(dwVersion));
-  end;
-  result:=format('%d.%d.%d',[dwMajorVersion,dwMinorVersion,dwBuild]);
+  result:=format('%d.%d.%d',[Win32MajorVersion,Win32MinorVersion,Win32BuildNumber]);
 end;
 
 function WINDOWS_EDITION:WindowsEdition;
 var
   wv:TOSVersionInfo;
-  majorVersion,
-  minorVersion,
-  platformID
-    :DWORD;
   isServerR2,
   isNTWorkstation,
   isAMD64,
   isVerSuiteWHServer
     :boolean;
 begin
-  if dwVersion=0 then
-    WINDOWS_VERSION;
-
-  majorVersion:=dwMajorVersion;
-  minorVersion:=dwMinorVersion;
-  platformID:=Win32Platform;
-
   result:=WindowsEdition(0);
-  if majorVersion=4 then begin
-    case minorVersion of
+  if Win32MajorVersion=4 then begin
+    case Win32MinorVersion of
       0:
-        if platformID=VER_PLATFORM_WIN32_NT then
+        if Win32Platform=VER_PLATFORM_WIN32_NT then
           result:=wNT4
         else
           result:=w95;
@@ -488,15 +447,14 @@ begin
       90:result:=wME;
     end;
   end else
-  if (majorVersion=5) or ((majorVersion=6) and (minorVersion<3)) then begin
+  if (Win32MajorVersion=5) or ((Win32MajorVersion=6) and (Win32MinorVersion<3)) then begin
     wv:=WINDOWS_VERSION_INFO;
-    platformID:=wv.dwPlatformId;
     isServerR2:=GetSystemMetrics(SM_SERVERR2)<>0;
     isVerSuiteWHServer:=(wv.wSuiteMask and VER_SUITE_WH_SERVER)<>0;
     isNTWorkstation:=wv.wProductType=VER_NT_WORKSTATION;
     isAMD64:=PROCESSOR_ARCHITECTURE=archAMD64;
-    case majorVersion of
-      5:case minorVersion of
+    case Win32MajorVersion of
+      5:case Win32MinorVersion of
         0:result:=w2000;
         1:result:=wXP;
         2:begin
@@ -513,7 +471,7 @@ begin
             result:=wSERVER2003
         end;
       end;
-      6:case minorVersion of
+      6:case Win32MinorVersion of
         0:
           if isNTWorkstation then
             result:=wVista

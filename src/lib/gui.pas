@@ -84,7 +84,7 @@ type
   protected
     procedure Paint(var g:TCanvas);override;
   public
-    constructor Create(parent:Window=NIL);
+    constructor Create(parent:Window=NIL); reintroduce;
   end;
 
   Edit=class(Component)

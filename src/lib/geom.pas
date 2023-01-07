@@ -230,7 +230,7 @@ begin
   if newSize=NIL then
     Exception.Create('geom.Dimension2D.Resize(Dimension2D): Nil pointer');
 
-  self.Resize(newSize.Width,newSize.Height);
+  self.Resize(newSize.fSize.cx,newSize.fSize.cy);
 end;
 
 constructor Point2D.Create;
@@ -375,7 +375,7 @@ begin
   if size=NIL then
     raise Exception.Create('geom.Rectangle.Create(Dimension2D): Nil pointer');
 
-  Create(size.fSize.cx,size.fSize.cy);
+  Create(0,0,size.fSize.cx,size.fSize.cy);
 end;
 
 constructor Rectangle.Create(const p:Point2D);
@@ -398,6 +398,7 @@ constructor Rectangle.CreateSquare(const size:longint);
 begin
   if size<0 then
     raise Exception.Create('geom.Rectangle.CreateSquare(longint): negative size');
+
   Create(0,0,size,size);
 end;
 
@@ -405,6 +406,7 @@ constructor Rectangle.CreateSquare(const x,y,size:longint);
 begin
   if size<0 then
     raise Exception.Create('geom.Rectangle.CreateSquare(longint,longint,longint): negative size');
+
   Create(x,y,x+size,y+size);
 end;
 
@@ -509,6 +511,7 @@ procedure Rectangle.Resize(const newWidth,newHeight:integer);
 begin
   if (newWidth or newHeight)<0 then
     raise Exception.Create('geom.Rectangle.Resize(integer,integer): negative size');
+
   self.fRect.right:=self.fRect.left+newWidth;
   self.fRect.bottom:=self.fRect.top+newHeight;
 end;
@@ -518,7 +521,7 @@ begin
   if newSize=NIL then
     raise Exception.Create('geom.Rectangle.Resize(Dimension2D): Nil pointer');
 
-  self.Resize(newSize.Width,newSize.Height);
+  self.Resize(newSize.fSize.cx,newSize.fSize.cy);
 end;
 
 procedure Rectangle.Offset(const dx,dy:integer);
@@ -536,8 +539,8 @@ begin
   sz:=self.GetSize;
   self.fRect.left:=x;
   self.fRect.top:=y;
-  self.fRect.right:=x+sz.Width;
-  self.fRect.bottom:=y+sz.Height;
+  self.fRect.right:=x+sz.fSize.cx;
+  self.fRect.bottom:=y+sz.fSize.cy;
 end;
 
 procedure Rectangle.MoveTo(const p:Point2D);
