@@ -394,6 +394,7 @@ begin
 end;
 
 const
+  SM_CMONITORS = 80;
   SM_SERVERR2 = 89;
   VER_SUITE_WH_SERVER = $00008000;
   VER_NT_WORKSTATION = $0000001;
@@ -536,6 +537,10 @@ end;
 function NUMBER_OF_DISPLAY_MONITORS:cardinal;
 begin
   result:=GetSystemMetrics(SM_CMONITORS);
+  if result=0 then begin
+    result:=1;
+    LogError('env.NUMBER_OF_DISPLAY_MONITORS: the call GetSystemMetrics(SM_CMONITORS) failed... we set result to 1');
+  end;
 end;
 
 function SCREEN_SIZE:TSize;
