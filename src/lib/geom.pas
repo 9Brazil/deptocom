@@ -71,6 +71,7 @@ type
     function DistanceSq(const p:Point2D):extended;overload;
     class function Distance(const p1,p2:Point2D):extended;overload;
     function Distance(const p:Point2D):extended;overload;
+    function Collinear(const p1,p2:Point2D):boolean;
   end;
 
   Rectangle=class(TInterfacedObject)
@@ -140,6 +141,9 @@ function SizeToString(const size:tagSIZE):string;
 function PointToString(const point:tagPOINT):string;
 function RectToString(const rect:tagRECT):string;overload;
 function RectToString(const rect:TRect):string;overload;
+function DistanceSq(const p1,p2:tagPOINT):extended;
+function Distance(const p1,p2:tagPOINT):extended;
+function Collinear(const p1,p2,p3:tagPOINT):boolean;
 
 implementation
 
@@ -166,6 +170,21 @@ end;
 function RectToString(const rect:TRect):string;
 begin
   result:='[TopLeft=('+IntToStr(rect.left)+','+IntToStr(rect.top)+'),BottomRight=('+IntToStr(rect.right)+','+IntToStr(rect.bottom)+')]';
+end;
+
+function DistanceSq(const p1,p2:tagPOINT):extended;
+begin
+  result:=(p2.X-p1.X)*(p2.X-p1.X) + (p2.Y-p1.Y)*(p2.Y-p1.Y);
+end;
+
+function Distance(const p1,p2:tagPOINT):extended;
+begin
+  result:=Sqrt(DistanceSq(p1,p2));
+end;
+
+function Collinear(const p1,p2,p3:tagPOINT):boolean;
+begin
+  result:=(p3.Y-p1.Y)*(p2.X-p1.X)=(p2.Y-p1.Y)*(p3.X-p1.X);
 end;
 
 constructor Dimension2D.Create;
@@ -311,22 +330,30 @@ end;
 
 class function Point2D.DistanceSq(const p1,p2:Point2D):extended;
 begin
-  result:=(p2.fPoint.X-p1.fPoint.X)*(p2.fPoint.X-p1.fPoint.X) + (p2.fPoint.Y-p1.fPoint.Y)*(p2.fPoint.Y-p1.fPoint.Y);
+  result:=geom.DistanceSq(p1.fPoint,p2.fPoint);
 end;
 
 function Point2D.DistanceSq(const p:Point2D):extended;
 begin
-  result:=Point2D.DistanceSq(self,p);
+  result:=geom.DistanceSq(self.fPoint,p.fPoint);
 end;
 
 class function Point2D.Distance(const p1,p2:Point2D):extended;
 begin
-  result:=Sqrt(Point2D.DistanceSq(p1,p2));
+  result:=geom.DistanceSq(p1.fPoint,p2.fPoint);
 end;
 
 function Point2D.Distance(const p:Point2D):extended;
 begin
-  result:=Point2D.Distance(self,p);
+  result:=geom.Distance(self.fPoint,p.fPoint);
+end;
+
+function Point2D.Collinear(const p1,p2:Point2D):boolean;
+begin
+  if (p1=NIL) or (p2=NIL) then
+    raise Exception.Create('geom.Point2D.Collinear(Point2D,Point2D): Nil pointer');
+
+  result:=geom.Collinear(self.fPoint,p1.fPoint,p2.fPoint);
 end;
 
 constructor Rectangle.Create;

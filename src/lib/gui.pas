@@ -32,7 +32,9 @@ type
 
   Component=class(TInterfacedObject)
   private
-    fId:cardinal;
+    fId,
+    fHWndIdListIndex
+      :cardinal;
     fHandle:HWND;
     fVisible,
     fEnabled
@@ -55,7 +57,7 @@ type
   public
     constructor Create(parent:Container=NIL);virtual;
     destructor Destroy;override;
-    function Equals(obj:TObject):boolean;    
+    function Equals(obj:TObject):boolean;
     procedure SetSize(const x,y,width,height:int32);
     property Id:cardinal read fId;
     property Parent:Container read fParent;
@@ -84,7 +86,7 @@ type
   protected
     procedure Paint(var g:TCanvas);override;
   public
-    constructor Create(parent:Window=NIL); reintroduce;
+    constructor Create(parent:Window=NIL); reintroduce; virtual;
   end;
 
   Edit=class(Component)
@@ -147,12 +149,25 @@ begin
 end;
 
 destructor Component.Destroy;
+var
+  i,l:integer;
+  list:hWndIdList;
 begin
-  if (fHandle<>0) and (fHandle<>INVALID_HANDLE_VALUE) then
+  if (fHandle<>0) and (fHandle<>INVALID_HANDLE_VALUE) then begin
     DestroyWindow(fHandle);
+    list:=HWndIdSlot[fHandle mod 65536];
+    l:=Length(list)-1;
+    for i:=fHWndIdListIndex+1 to l do begin
+      list[i-1].hndl:=list[i].hndl;
+      list[i-1].id:=list[i].id;
+      arrayOfComponents[list[i-1].id].fHWndIdListIndex:=i-1;
+    end;
+    SetLength(list,l);
+  end;
   arrayOfComponents[fId-1]:=NIL;
   fHandle:=0;
   fId:=0;
+  fHWndIdListIndex:=0;
   fLeft:=0;
   fTop:=0;
   fWidth:=0;

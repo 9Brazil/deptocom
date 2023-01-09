@@ -126,7 +126,7 @@ const
     'Windows 95',
     'Windows NT 4.0',
     'Windows 98',
-    'Windows 2000',    
+    'Windows 2000',
     'Windows Millennium',
     'Windows XP',
     'Windows XP x64',
@@ -149,6 +149,7 @@ function QueryRegistryValue(const nome:ansistring; out valor:ansistring; const k
 function SetRegistryValue(const nome, valor : ansistring; const key:ansistring=SOFTWARE_REGISTRYKEY; const rootkey:HKEY=HKEY_CURRENT_USER):boolean;
 
 function PID:cardinal;
+function CURRENT_PROCESS_HANDLE:THandle;
 
 function GetConsoleWindow:HWND; stdcall; external kernel32;
 procedure HideConsole;
@@ -332,6 +333,11 @@ end;
 function PID:cardinal;
 begin
   result:=GetCurrentProcessId;
+end;
+
+function CURRENT_PROCESS_HANDLE:THandle;
+begin
+  result:=GetCurrentProcess;
 end;
 
 procedure HideConsole;
@@ -679,7 +685,7 @@ begin
     if FileExists(stdof) then
       Append(System.Output)
     else
-      Rewrite(System.Output);
+      ReWrite(System.Output);
     Write;//dummy test
     StdOutputFileOK:=TRUE;
     stdoutFile:=stdof;
@@ -693,6 +699,46 @@ begin
     CloseFile(System.Output);
   stdoutFile:='';
   StdOutputFileOK:=FALSE;
+end;
+
+//testa os direitos de leitura e escrita no diretório de arquivos temporários
+//cria um arquivo no diretório, escreve no arquivo e lê o que foi escrito (e verifica se o lido corresponde ao escrito)
+var arquivoTesteEmTMPDIR:string;
+procedure TestarDireitosDeEscritaELeituraEmTMPDIR;
+const
+  LINHA1='Linha1';
+  LINHA2='Linha2';
+var
+  arquivoTeste:textFile;
+  linha:string;
+begin
+  arquivoTesteEmTMPDIR:=TMPDIR+DIRECTORY_SEPARATOR+'teste'+CURRENT_TIMESTAMP+'.txt';
+  AssignFile(arquivoTeste,arquivoTesteEmTMPDIR);
+  ReWrite(arquivoTeste);
+  WriteLn(arquivoTeste,LINHA1);
+  WriteLn(arquivoTeste,LINHA2);
+  CloseFile(arquivoTeste);
+  Reset(arquivoTeste);
+  ReadLn(arquivoTeste,linha);
+  if linha<>LINHA1 then
+    raise Edeptocom.Create('TestarDireitosDeEscritaELeituraEmTMPDIR: linha lida não corresponde à linha escrita: '
+      +'linha<>LINHA1: linha = '''+linha+''': LINHA1 = '''+LINHA1+'''');
+  ReadLn(arquivoTeste,linha);
+  if linha<>LINHA2 then
+    raise Edeptocom.Create('TestarDireitosDeEscritaELeituraEmTMPDIR: linha lida não corresponde à linha escrita: '
+      +'linha<>LINHA2: linha = '''+linha+''': LINHA2 = '''+LINHA2+'''');
+  CloseFile(arquivoTeste);
+  ReWrite(arquivoTeste);
+  CloseFile(arquivoTeste);
+end;
+//apaga o arquivo criado no diretório de arquivos temporários [tmpdir] pela procedure TestarDireitosDeEscritaELeituraEmTMPDIR
+procedure ApagarArquivoTesteCriadoEmTMPDIR;
+begin
+  if FileExists(arquivoTesteEmTMPDIR) then begin
+    if DeleteFile(PAnsiChar(arquivoTesteEmTMPDIR))=LongBool(0) then
+      LogError('A chamada DeleteFile('+PAnsiChar(arquivoTesteEmTMPDIR)+') retornou FALSE: ErrorCode: '+IntToStr(GetLastError)); //v. https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes
+  end else LogError('A chamada FileExists('+arquivoTesteEmTMPDIR+') retornou FALSE: o arquivo '+arquivoTesteEmTMPDIR+' não existe: '  //Linha adicionada apenas por COMPLETUDE! Não ocorre!
+    +'um arquivo de teste não fora criado no diretório de arquivos temporários [tmpdir]');                                            //(Na falha em se criar o arquivo de teste, o fluxo de execução teria sido interrompido!)
 end;
 
 var
@@ -821,16 +867,17 @@ initialization
       end;
     end;
 
-    //testar aqui os direitos de leitura e escrita no diretório de arquivos temporários
+    TestarDireitosDeEscritaELeituraEmTMPDIR;
 
     folderOK:=TRUE;
   except
     on e:Exception do begin
-      LogFatal(SOFTWARE_NAME+': env: initialization: '+e.Classname+': '+e.message+': não foi possível criar um diretório para arquivos temporários',
+      LogFatal(SOFTWARE_NAME+': env: initialization: não há um diretório para arquivos temporários OK: '+e.Classname+': '+e.message,
       RUNERR_NO_TMPDIR,TRUE); //sem um diretório para arquivos temporários
                               //não podemos iniciar o programa
     end;
   end;
+  ApagarArquivoTesteCriadoEmTMPDIR;
 
   //verificar diretório de dados aqui
   errcode:=RUNERR_NO_DATADIR;
