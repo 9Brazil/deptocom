@@ -91,10 +91,10 @@ ImageBase=4194304
 ExeDescription=
 [Directories]
 OutputDir=C:\deptocom\bin
-UnitOutputDir=C:\Users\leonardo\Documents\GitHub\deptocom\output
+UnitOutputDir=C:\deptocom\output
 PackageDLLOutputDir=C:\deptocom\output
 PackageDCPOutputDir=C:\deptocom\output
-SearchPath=C:\Users\leonardo\Documents\GitHub\deptocom\3;C:\Users\leonardo\Documents\GitHub\deptocom\3\Martin Waldenburg
+SearchPath=C:\deptocom\3;C:\deptocom\3\Martin Waldenburg
 Packages=vcl;rtl;vclx;indy;inet;xmlrtl;vclie;inetdbbde;inetdbxpress;dbrtl;dsnap;dsnapcon;vcldb;soaprtl;VclSmp;dbexpress;dbxcds;inetdb;bdertl;vcldbx;webdsnap;websnap;adortl;ibxpress;teeui;teedb;tee;dss;visualclx;visualdbclx;vclactnband;vclshlctrls;IntrawebDB_50_70;Intraweb_50_70;Rave50CLX;Rave50VCL;dclOfficeXP
 Conditionals=
 DebugSourceDirs=
@@ -139,15 +139,15 @@ Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
 Count=5
-Item0=C:\Users\leonardo\Documents\GitHub\deptocom\3;C:\Users\leonardo\Documents\GitHub\deptocom\3\Martin Waldenburg
-Item1=C:\deptocom\3;C:\deptocom\3\Martin Waldenburg
+Item0=C:\deptocom\3;C:\deptocom\3\Martin Waldenburg
+Item1=C:\Users\leonardo\Documents\GitHub\deptocom\3;C:\Users\leonardo\Documents\GitHub\deptocom\3\Martin Waldenburg
 Item2=C:\Users\leonardo\Documents\GitHub\deptocom\3;C:\Users\leonardo\Documents\GitHub\deptocom\3\Martin Waldenburg;C:\Users\leonardo\Documents\GitHub\deptocom\3\Synopse;C:\Users\leonardo\Documents\GitHub\deptocom\3\Synopse\LVCL
 Item3=C:\Users\leonardo\Documents\GitHub\deptocom\3
 Item4=C:\Users\leonardo\Documents\GitHub\deptocom\src
 [HistoryLists\hlUnitOutputDirectory]
 Count=2
-Item0=C:\Users\leonardo\Documents\GitHub\deptocom\output
-Item1=C:\deptocom\output
+Item0=C:\deptocom\output
+Item1=C:\Users\leonardo\Documents\GitHub\deptocom\output
 [HistoryLists\hlOutputDirectorry]
 Count=2
 Item0=C:\deptocom\bin

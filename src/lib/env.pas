@@ -736,7 +736,7 @@ procedure ApagarArquivoTesteCriadoEmTMPDIR;
 begin
   if FileExists(arquivoTesteEmTMPDIR) then begin
     if DeleteFile(PAnsiChar(arquivoTesteEmTMPDIR))=LongBool(0) then
-      LogError('A chamada DeleteFile('+PAnsiChar(arquivoTesteEmTMPDIR)+') retornou FALSE: ErrorCode: '+IntToStr(GetLastError)); //v. https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes
+      LogError('A chamada DeleteFile('+PAnsiChar(arquivoTesteEmTMPDIR)+') falhou: ErrorCode: '+IntToStr(GetLastError)); //v. https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes
   end else LogError('A chamada FileExists('+arquivoTesteEmTMPDIR+') retornou FALSE: o arquivo '+arquivoTesteEmTMPDIR+' não existe: '  //Linha adicionada apenas por COMPLETUDE! Não ocorre!
     +'um arquivo de teste não fora criado no diretório de arquivos temporários [tmpdir]');                                            //(Na falha em se criar o arquivo de teste, o fluxo de execução teria sido interrompido!)
 end;

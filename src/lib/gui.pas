@@ -401,12 +401,12 @@ begin
     nil);
 
   if (fHandle=0) or (fHandle=INVALID_HANDLE_VALUE) then begin
-    LogError('libgui: não foi possível criar a janela');
+    LogError('libgui: Window.Create(Window): [GDI] CreateWindow falhou: HWnd = '+IntToStr(fHandle)+': não foi possível criar a janela: Erro '+IntToStr(GetLastError));
     Exit;
   end;
 
   arrayOfComponents[fId-1]:=self;
-  len:=length(hWndIdSlot[fHandle mod 65536])+1;
+  len:=Length(hWndIdSlot[fHandle mod 65536])+1;
   SetLength(hWndIdSlot[fHandle mod 65536],len);
   hWndIdSlot[fHandle mod 65536][len-1].hndl:=fHandle;
   hWndIdSlot[fHandle mod 65536][len-1].id:=fId;
@@ -453,12 +453,12 @@ begin
     NIL); // No creation data
 
   if (fHandle=0) or (fHandle=INVALID_HANDLE_VALUE) then begin
-    LogError('libgui: não foi possível criar o edit');
+    LogError('libgui: Edit.Create(Container): [GDI] CreateWindowEx falhou: HWnd = '+IntToStr(fHandle)+': não foi possível criar o edit: Erro '+IntToStr(GetLastError));
     Exit;
   end;
 
   arrayOfComponents[fId-1]:=self;
-  len:=length(hWndIdSlot[fHandle mod 65536])+1;
+  len:=Length(hWndIdSlot[fHandle mod 65536])+1;
   SetLength(hWndIdSlot[fHandle mod 65536],len);
   hWndIdSlot[fHandle mod 65536][len-1].hndl:=fHandle;
   hWndIdSlot[fHandle mod 65536][len-1].id:=fId;
@@ -498,12 +498,12 @@ begin
     NIL); // No creation data
 
   if (fHandle=0) or (fHandle=INVALID_HANDLE_VALUE) then begin
-    LogError('libgui: não foi possível criar o botão');
+    LogError('libgui: Button.Create(Container): [GDI] CreateWindow falhou: HWnd = '+IntToStr(fHandle)+': não foi possível criar o botão: Erro '+IntToStr(GetLastError));
     Exit;
   end;
 
   arrayOfComponents[fId-1]:=self;
-  len:=length(hWndIdSlot[fHandle mod 65536])+1;
+  len:=Length(hWndIdSlot[fHandle mod 65536])+1;
   SetLength(hWndIdSlot[fHandle mod 65536],len);
   hWndIdSlot[fHandle mod 65536][len-1].hndl:=fHandle;
   hWndIdSlot[fHandle mod 65536][len-1].id:=fId;
