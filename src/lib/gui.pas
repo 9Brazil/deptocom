@@ -464,10 +464,15 @@ begin
   hWndIdSlot[fHandle mod 65536][len-1].id:=fId;
 
   // Set up the font
-  { Calculate font height from point size - they are not the same thing!
-    The first parameter of MulDiv is the point size. }
-  lfControl.lfHeight:=-MulDiv(8, GetDeviceCaps(GetDC(0), LOGPIXELSY), 96);
+	lfControl.lfStrikeOut := 0;//1 riscado, 0 não
+	lfControl.lfUnderline := 0;//1 sublinhado, 0 não
+	lfControl.lfHeight := 18;
+	lfControl.lfEscapement := 0;
+	lfControl.lfItalic := 0;//1 itálico, 0 não
+	lfControl.lfWidth := 8;
+  lfControl.lfWeight := FW_MEDIUM;
   lfControl.lfFaceName:='MS Sans Serif';
+
   // Create the font
   hControlFont:=CreateFontIndirect(lfControl);
   SendMessage(self.fHandle, WM_SETFONT, hControlFont, 1);
@@ -489,7 +494,7 @@ begin
     fParent:=parent;
   end;
   fHandle:=CreateWindow('BUTTON', // BUTTON creates an button, obviously
-    'Show Message', // Name of window - also the text that will be in it
+    'Button1', // Name of window - also the text that will be in it
     WS_CHILD or WS_VISIBLE or BS_PUSHBUTTON or BS_TEXT, // style flags
     8, 40, 96, 25, // Position and size
     parentHandle, // Parent window
@@ -509,10 +514,15 @@ begin
   hWndIdSlot[fHandle mod 65536][len-1].id:=fId;
 
   // Set up the font
-  { Calculate font height from point size - they are not the same thing!
-    The first parameter of MulDiv is the point size. }
-  lfControl.lfHeight:=-MulDiv(8, GetDeviceCaps(GetDC(0), LOGPIXELSY), 96);
+	lfControl.lfStrikeOut := 0;//1 riscado, 0 não
+	lfControl.lfUnderline := 0;//1 sublinhado, 0 não
+	lfControl.lfHeight := 18;
+	lfControl.lfEscapement := 0;
+	lfControl.lfItalic := 0;//1 itálico, 0 não
+	lfControl.lfWidth := 8;
+  lfControl.lfWeight := FW_MEDIUM;
   lfControl.lfFaceName:='MS Sans Serif';
+
   // Create the font
   hControlFont:=CreateFontIndirect(lfControl);
   SendMessage(self.fHandle, WM_SETFONT, hControlFont, 1);
