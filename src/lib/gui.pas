@@ -34,6 +34,16 @@ type
   
   end;
 
+  Ghrphcs=class(TInterfacedObject)
+  private
+    fHndDC:HDC;
+    fPS:PaintStruct;
+  public
+    //
+    //
+    //
+  end;
+
   WindowState=(wsNormal, wsMinimized, wsMaximized);
 
   Container=class;
