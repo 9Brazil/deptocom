@@ -10,10 +10,18 @@ uses
   Windows;
 
 const
+  DEFAULT_EDIT_X=8;
+  DEFAULT_EDIT_Y=8;
+  DEFAULT_EDIT_WIDTH=160;
+  DEFAULT_EDIT_HEIGHT=21;
   DEFAULT_WINDOW_X=40;
   DEFAULT_WINDOW_Y=40;
   DEFAULT_WINDOW_WIDTH=400;
   DEFAULT_WINDOW_HEIGHT=200;
+  DEFAULT_BUTTON_X=8;
+  DEFAULT_BUTTON_Y=20;
+  DEFAULT_BUTTON_WIDTH=75;
+  DEFAULT_BUTTON_HEIGHT=25;
 
 type
   GDIObject=class(TObject);
@@ -435,6 +443,7 @@ var
   len:integer;
 begin
   inherited Create(parent);
+
   if parent=NIL then begin
     parentHandle:=0;
     fParent:=NIL;
@@ -442,11 +451,20 @@ begin
     parentHandle:=parent.fHandle;
     fParent:=parent;
   end;
+
+  fLeft:=DEFAULT_EDIT_X;
+  fTop:=DEFAULT_EDIT_Y;
+  fWidth:=DEFAULT_EDIT_WIDTH;
+  fHeight:=DEFAULT_EDIT_HEIGHT;
+
   fHandle:=CreateWindowEx(WS_EX_CLIENTEDGE, // Extended style
-    'EDIT', // EDIT creates an edit box
-    'Edit1',// Name of window - also the text that will be in it
+    'EDIT',   // EDIT creates an edit box
+    'Edit1',  // Name of window - also the text that will be in it
     WS_CHILD or WS_VISIBLE or ES_AUTOHSCROLL or ES_NOHIDESEL, // style flags
-    8, 16, 160, 21, // Position and size
+    fLeft,
+    fTop,
+    fWidth,
+    fHeight,
     parentHandle, // Parent window
     0, // Menu - none because it's an edit box(!)
     SysInit.HInstance, // Application instance
@@ -464,14 +482,14 @@ begin
   hWndIdSlot[fHandle mod 65536][len-1].id:=fId;
 
   // Set up the font
-	lfControl.lfStrikeOut := 0;//1 riscado, 0 não
-	lfControl.lfUnderline := 0;//1 sublinhado, 0 não
-	lfControl.lfHeight := 18;
-	lfControl.lfEscapement := 0;
-	lfControl.lfItalic := 0;//1 itálico, 0 não
-	lfControl.lfWidth := 8;
-  lfControl.lfWeight := FW_MEDIUM;
-  lfControl.lfFaceName:='MS Sans Serif';
+  lfControl.lfStrikeOut := 0;//1 riscado, 0 não
+  lfControl.lfUnderline := 0;//1 sublinhado, 0 não
+  lfControl.lfHeight := -11;//altura da fonte
+  lfControl.lfEscapement := 0;
+  lfControl.lfItalic := 0;//1 itálico, 0 não
+  lfControl.lfWidth := 8;//espessura da fonte
+  lfControl.lfWeight := FW_NORMAL;//peso da fonte
+  lfControl.lfFaceName:='MS Sans Serif';//nome da (família da) fonte
 
   // Create the font
   hControlFont:=CreateFontIndirect(lfControl);
@@ -486,6 +504,7 @@ var
   len:integer;
 begin
   inherited Create(parent);
+
   if parent=NIL then begin
     parentHandle:=0;
     fParent:=NIL;
@@ -493,10 +512,19 @@ begin
     parentHandle:=parent.fHandle;
     fParent:=parent;
   end;
+
+  fLeft:=DEFAULT_BUTTON_X;
+  fTop:=DEFAULT_BUTTON_Y;
+  fWidth:=DEFAULT_BUTTON_WIDTH;
+  fHeight:=DEFAULT_BUTTON_HEIGHT;
+
   fHandle:=CreateWindow('BUTTON', // BUTTON creates an button, obviously
     'Button1', // Name of window - also the text that will be in it
     WS_CHILD or WS_VISIBLE or BS_PUSHBUTTON or BS_TEXT, // style flags
-    8, 40, 96, 25, // Position and size
+    fLeft,
+    fTop,
+    fWidth,
+    fHeight,
     parentHandle, // Parent window
     0, // Menu - none because it's a button
     SysInit.HInstance, // Application instance
@@ -514,12 +542,12 @@ begin
   hWndIdSlot[fHandle mod 65536][len-1].id:=fId;
 
   // Set up the font
-	lfControl.lfStrikeOut := 0;//1 riscado, 0 não
-	lfControl.lfUnderline := 0;//1 sublinhado, 0 não
-	lfControl.lfHeight := 18;
-	lfControl.lfEscapement := 0;
-	lfControl.lfItalic := 0;//1 itálico, 0 não
-	lfControl.lfWidth := 8;
+  lfControl.lfStrikeOut := 0;//1 riscado, 0 não
+  lfControl.lfUnderline := 0;//1 sublinhado, 0 não
+  lfControl.lfHeight := 18;
+  lfControl.lfEscapement := 0;
+  lfControl.lfItalic := 0;//1 itálico, 0 não
+  lfControl.lfWidth := 8;
   lfControl.lfWeight := FW_MEDIUM;
   lfControl.lfFaceName:='MS Sans Serif';
 
